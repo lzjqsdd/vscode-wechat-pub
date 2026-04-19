@@ -52,6 +52,18 @@
       {
         "command": "wechatPub.setTheme",
         "title": "切换主题"
+      },
+      {
+        "command": "wechatPub.setPrimaryColor",
+        "title": "设置主题色"
+      },
+      {
+        "command": "wechatPub.toggleOption",
+        "title": "切换选项"
+      },
+      {
+        "command": "wechatPub.uploadImage",
+        "title": "上传图片到公众号"
       }
     ],
     "menus": {
@@ -60,6 +72,30 @@
           "command": "wechatPub.preview",
           "when": "editorLangId == markdown",
           "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "wechatPub.uploadImage",
+          "when": "editorLangId == markdown",
+          "group": "wechatPub"
+        },
+        {
+          "command": "wechatPub.publish",
+          "when": "editorLangId == markdown",
+          "group": "wechatPub"
+        },
+        {
+          "command": "wechatPub.copyHtml",
+          "when": "editorLangId == markdown",
+          "group": "wechatPub"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "wechatPub.uploadImage",
+          "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
+          "group": "wechatPub"
         }
       ]
     },
