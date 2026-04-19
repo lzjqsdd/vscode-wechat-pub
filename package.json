@@ -39,8 +39,7 @@
     "commands": [
       {
         "command": "wechatPub.preview",
-        "title": "$(eye) 公众号预览",
-        "icon": "$(eye)"
+        "title": "👁️ 公众号预览"
       },
       {
         "command": "wechatPub.copyHtml",
@@ -80,7 +79,7 @@
         {
           "command": "wechatPub.preview",
           "when": "editorLangId == markdown",
-          "group": "navigation"
+          "group": "navigation@1"
         }
       ],
       "editor/context": [
