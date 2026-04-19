@@ -26,4 +26,4 @@ npm-debug.log*
 .env.*.local
 
 # Test
-coverage/
+coverage/browser/

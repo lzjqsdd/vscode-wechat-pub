@@ -30,7 +30,7 @@ export class ThemeManager {
    */
   getThemeCSS(theme: ThemeName, primaryColor: string, vscodeThemeKind: string = 'light'): string {
     const baseCSS = this.loadCSS('base.css');
-    const themeCSS = this.loadCSS(`${theme}.css`);
+    const defaultCSS = this.loadCSS('default.css');
 
     // 根据 VSCode 主题调整预览背景
     const isDark = vscodeThemeKind === 'dark' || vscodeThemeKind === 'high-contrast';
@@ -48,7 +48,14 @@ export class ThemeManager {
   --md-text-color: ${previewText};
 }`;
 
-    return `${variables}\n${baseCSS}\n${themeCSS}`;
+    // md 项目主题组合逻辑：default.css 作为基础，grace/simple.css 叠加
+    if (theme === 'default') {
+      return `${variables}\n${baseCSS}\n${defaultCSS}`;
+    }
+
+    // 非 default 主题：default.css + 特定主题 CSS
+    const themeCSS = this.loadCSS(`${theme}.css`);
+    return `${variables}\n${baseCSS}\n${defaultCSS}\n${themeCSS}`;
   }
 
   /**
