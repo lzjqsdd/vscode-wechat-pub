@@ -55,10 +55,9 @@ export class SidebarItem extends vscode.TreeItem {
         return new vscode.ThemeIcon('gear');
       case 'group-draft':
         return new vscode.ThemeIcon('folder');
-      case 'setting-group':
-        return new vscode.ThemeIcon('chevron-right');
+      // setting-group 不设置图标，让 VSCode 自动显示展开/折叠符号
       case 'setting-subgroup':
-        return new vscode.ThemeIcon('list-unordered');
+        return undefined;
       case 'draft-item':
         return new vscode.ThemeIcon('file-text');
       default:
