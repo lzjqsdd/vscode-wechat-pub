@@ -170,7 +170,7 @@ export class WechatApiClient {
       }
     });
 
-    if (response.errcode !== 0) {
+    if (response.errcode !== undefined && response.errcode !== 0) {
       throw new WechatApiError(
         response.errcode,
         `更新草稿失败: ${response.errmsg}`
@@ -260,7 +260,7 @@ export class WechatApiClient {
       body: { media_id: mediaId }
     });
 
-    if (response.errcode !== 0) {
+    if (response.errcode !== undefined && response.errcode !== 0) {
       throw new WechatApiError(
         response.errcode,
         `删除草稿失败: ${response.errmsg}`
@@ -297,6 +297,10 @@ export class WechatApiClient {
           data += chunk;
         });
         res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            return;
+          }
           try {
             const json = JSON.parse(data);
             resolve(json as T);
@@ -336,7 +340,7 @@ export class WechatApiClient {
         `Content-Type: ${filetype}\r`,
         '\r',
         file,
-        '\r--${boundary}--\r'
+        `\r--${boundary}--\r`
       ];
 
       // 计算总长度
@@ -369,6 +373,10 @@ export class WechatApiClient {
           data += chunk;
         });
         res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            return;
+          }
           try {
             const json = JSON.parse(data);
             resolve(json as T);
