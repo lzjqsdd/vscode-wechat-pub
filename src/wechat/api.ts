@@ -191,7 +191,7 @@ export class WechatApiClient {
       body: { media_id: mediaId }
     });
 
-    if (response.errcode && response.errcode !== 0) {
+    if (response.errcode !== undefined && response.errcode !== 0) {
       throw new WechatApiError(
         response.errcode,
         `获取草稿失败: ${response.errmsg}`
@@ -335,12 +335,12 @@ export class WechatApiClient {
       const contentType = `multipart/form-data; boundary=${boundary}`;
 
       const parts = [
-        `--${boundary}\r`,
-        `Content-Disposition: form-data; name="media"; filename="${filename}"\r`,
-        `Content-Type: ${filetype}\r`,
-        '\r',
+        `--${boundary}\r\n`,
+        `Content-Disposition: form-data; name="media"; filename="${filename}"\r\n`,
+        `Content-Type: ${filetype}\r\n`,
+        '\r\n',
         file,
-        `\r--${boundary}--\r`
+        `\r\n--${boundary}--\r\n`
       ];
 
       // 计算总长度

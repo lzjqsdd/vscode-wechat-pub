@@ -6,7 +6,7 @@
 import { marked } from 'marked';
 import frontMatter from 'front-matter';
 import hljs from 'highlight.js';
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface RenderOptions {
   countStatus?: boolean;    // 显示字数统计
@@ -54,6 +54,16 @@ function escapeHtml(text: string): string {
     .replace(DOUBLE_QUOTE_REGEX, '&quot;')
     .replace(SINGLE_QUOTE_REGEX, '&#39;')
     .replace(BACKTICK_REGEX, '&#96;');
+}
+
+/**
+ * 转义 HTML 属性值，防止 XSS 注入
+ */
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
 }
 
 function extractFileName(href: string): string {
@@ -156,16 +166,17 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     breaks: true,
   });
 
-  // 自定义渲染器
-  const renderer = {
-    heading({ tokens, depth }: any): string {
-      const text = this.parser.parseInline(tokens);
-      const tag = `h${depth}`;
+  // 自定义渲染器 - 使用对象字面量配合类型断言解决 TypeScript 类型问题
+  // marked v12 使用 token-based API，但 TypeScript 类型定义仍使用旧式签名
+  const renderer = Object.assign(new marked.Renderer(), {
+    heading(token: any): string {
+      const text = marked.parseInline(token.tokens) as string;
+      const tag = `h${token.depth}`;
       return styledContent(tag, text);
     },
 
-    paragraph({ tokens }: any): string {
-      const text = this.parser.parseInline(tokens);
+    paragraph(token: any): string {
+      const text = marked.parseInline(token.tokens) as string;
       const isFigureImage = text.includes('<figure') && text.includes('<img');
       const isEmpty = text.trim() === '';
       if (isFigureImage || isEmpty) {
@@ -174,94 +185,105 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
       return styledContent('p', text);
     },
 
-    blockquote({ tokens }: any): string {
-      const text = this.parser.parse(tokens);
+    blockquote(token: any): string {
+      const text = marked.parse(token.tokens) as string;
       return styledContent('blockquote', text);
     },
 
-    code({ text, lang = '' }: any): string {
+    code(token: any): string {
+      const lang = token.lang || '';
       const langText = lang.split(' ')[0];
       const language = hljs.getLanguage(langText) ? langText : 'plaintext';
 
       let highlighted: string;
       try {
-        highlighted = hljs.highlight(text, { language }).value;
+        highlighted = hljs.highlight(token.text, { language }).value;
       } catch {
-        highlighted = escapeHtml(text);
+        highlighted = escapeHtml(token.text);
       }
 
       const macSign = options.isMacCodeBlock
         ? `<span class="mac-sign" style="padding: 10px 14px 0;">${macCodeSvg}</span>`
         : '';
 
-      const code = `<code class="language-${lang}">${highlighted}</code>`;
+      const code = `<code class="language-${escapeAttribute(lang)}">${highlighted}</code>`;
       return `<pre class="hljs code__pre">${macSign}${code}</pre>`;
     },
 
-    codespan({ text }: any): string {
-      const escapedText = escapeHtml(text);
+    codespan(token: any): string {
+      const escapedText = escapeHtml(token.text);
       return styledContent('codespan', escapedText, 'code');
     },
 
-    list({ ordered, items, start = 1 }: any): string {
-      const html = items.map((item: any) => this.listitem(item)).join('');
-      return styledContent(ordered ? 'ol' : 'ul', html);
+    list(token: any): string {
+      const html = token.items.map((item: any) => renderer.listitem(item)).join('');
+      return styledContent(token.ordered ? 'ol' : 'ul', html);
     },
 
     listitem(token: any): string {
       let content: string;
       try {
-        content = this.parser.parseInline(token.tokens);
+        content = marked.parseInline(token.tokens) as string;
       } catch {
-        content = this.parser
-          .parse(token.tokens)
+        content = (marked.parse(token.tokens) as string)
           .replace(PARAGRAPH_WRAPPER_REGEX, '$1');
       }
       return styledContent('listitem', content, 'li');
     },
 
-    image({ href, title, text }: any): string {
+    image(token: any): string {
+      const href = token.href || '';
+      const text = token.text || '';
+      const title = token.title;
+      const safeHref = escapeAttribute(href);
+      const safeText = escapeAttribute(text);
+      const safeTitle = title ? escapeAttribute(title) : '';
       const newText = options.legend ? transform(options.legend, text, title, href) : '';
       const subText = newText ? styledContent('figcaption', newText) : '';
-      const titleAttr = title ? ` title="${title}"` : '';
-      return `<figure><img src="${href}"${titleAttr} alt="${text}"/>${subText}</figure>`;
+      const titleAttr = safeTitle ? ` title="${safeTitle}"` : '';
+      return `<figure><img src="${safeHref}"${titleAttr} alt="${safeText}"/>${subText}</figure>`;
     },
 
-    link({ href, title, text, tokens }: any): string {
-      const parsedText = this.parser.parseInline(tokens);
+    link(token: any): string {
+      const href = token.href || '';
+      const text = token.text || '';
+      const title = token.title;
+      const safeHref = escapeAttribute(href);
+      const parsedText = marked.parseInline(token.tokens) as string;
+      const safeTitle = escapeAttribute(title || text);
       if (MP_WEIXIN_LINK_REGEX.test(href)) {
-        return `<a href="${href}" title="${title || text}">${parsedText}</a>`;
+        return `<a href="${safeHref}" title="${safeTitle}">${parsedText}</a>`;
       }
       if (href === text) {
         return parsedText;
       }
       if (options.citeStatus) {
         const ref = addFootnote(title || text, href);
-        return `<a href="${href}" title="${title || text}">${parsedText}<sup>[${ref}]</sup></a>`;
+        return `<a href="${safeHref}" title="${safeTitle}">${parsedText}<sup>[${ref}]</sup></a>`;
       }
-      return `<a href="${href}" title="${title || text}">${parsedText}</a>`;
+      return `<a href="${safeHref}" title="${safeTitle}">${parsedText}</a>`;
     },
 
-    strong({ tokens }: any): string {
-      return styledContent('strong', this.parser.parseInline(tokens));
+    strong(token: any): string {
+      return styledContent('strong', marked.parseInline(token.tokens) as string);
     },
 
-    em({ tokens }: any): string {
-      return styledContent('em', this.parser.parseInline(tokens));
+    em(token: any): string {
+      return styledContent('em', marked.parseInline(token.tokens) as string);
     },
 
-    table({ header, rows }: any): string {
-      const headerRow = header
+    table(token: any): string {
+      const headerRow = token.header
         .map((cell: any) => {
-          const text = this.parser.parseInline(cell.tokens);
+          const text = marked.parseInline(cell.tokens) as string;
           return styledContent('th', text, undefined, `text-align: ${cell.align || 'left'}`);
         })
         .join('');
-      const body = rows
+      const body = token.rows
         .map((row: any) => {
           const rowContent = row
             .map((cell: any) => {
-              const text = this.parser.parseInline(cell.tokens);
+              const text = marked.parseInline(cell.tokens) as string;
               return styledContent('td', text, undefined, `text-align: ${cell.align || 'left'}`);
             })
             .join('');
@@ -281,7 +303,7 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     hr(): string {
       return '<hr class="hr hr-dash">';
     },
-  };
+  });
 
   marked.use({ renderer });
 
