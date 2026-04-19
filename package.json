@@ -1,14 +1,33 @@
 {
-  "name": "wechat-pub",
+  "name": "vscode-wechat-pub",
   "displayName": "微信公众号助手",
-  "description": "Markdown 编辑器，支持公众号格式预览、复制和发布",
+  "description": "VSCode 微信公众号 Markdown 编辑助手，支持实时预览、一键发布、多主题排版、图片上传等功能，让公众号文章写作更高效",
   "version": "0.1.0",
-  "publisher": "infmax",
+  "publisher": "lzjqsdd",
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lzjqsdd/vscode-wechat-pub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lzjqsdd/vscode-wechat-pub/issues"
+  },
+  "homepage": "https://github.com/lzjqsdd/vscode-wechat-pub#readme",
   "engines": {
     "vscode": "^1.91.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Snippets"
+  ],
+  "keywords": [
+    "wechat",
+    "微信公众号",
+    "markdown",
+    "preview",
+    "公众号排版",
+    "文章发布"
   ],
   "activationEvents": [
     "onLanguage:markdown",
