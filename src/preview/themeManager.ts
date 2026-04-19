@@ -25,17 +25,27 @@ export class ThemeManager {
    * 获取主题 CSS
    * @param theme 主题名称
    * @param primaryColor 主色调
+   * @param vscodeThemeKind VSCode 颜色主题类型（light/dark）
    * @returns 合并后的 CSS 字符串
    */
-  getThemeCSS(theme: ThemeName, primaryColor: string): string {
+  getThemeCSS(theme: ThemeName, primaryColor: string, vscodeThemeKind: string = 'light'): string {
     const baseCSS = this.loadCSS('base.css');
     const themeCSS = this.loadCSS(`${theme}.css`);
+
+    // 根据 VSCode 主题调整预览背景
+    const isDark = vscodeThemeKind === 'dark' || vscodeThemeKind === 'high-contrast';
+    const previewBackground = isDark ? '#1e1e1e' : '#f5f5f5';
+    const previewContentBackground = isDark ? '#252526' : '#ffffff';
+    const previewText = isDark ? '#cccccc' : '#333333';
 
     const variables = `
 :root {
   --md-primary-color: ${primaryColor};
   --md-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --md-font-size: 14px;
+  --md-preview-bg: ${previewBackground};
+  --md-content-bg: ${previewContentBackground};
+  --md-text-color: ${previewText};
 }`;
 
     return `${variables}\n${baseCSS}\n${themeCSS}`;

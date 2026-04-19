@@ -133,6 +133,13 @@ function styledContent(styleLabel: string, content: string, tagName?: string, st
  * 渲染 Markdown 到 HTML
  */
 export function renderMarkdown(content: string, options: RenderOptions = {}): RenderResult {
+  // Debug: 打印输入内容
+  console.log('[wechatPub] renderMarkdown input:', {
+    contentLength: content?.length || 0,
+    contentPreview: content?.substring(0, 200) || '(empty)',
+    options
+  });
+
   // 解析 front-matter
   let yamlData: Record<string, any> = {};
   let markdownContent = content;
@@ -140,13 +147,20 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
   try {
     const parsed = frontMatter(content);
     yamlData = (parsed.attributes as Record<string, any>) || {};
-    markdownContent = parsed.body;
+    markdownContent = parsed.body || '';
+    console.log('[wechatPub] front-matter parsed:', {
+      yamlData,
+      bodyLength: markdownContent?.length || 0,
+      bodyPreview: markdownContent?.substring(0, 200) || '(empty)'
+    });
   } catch (error) {
-    console.error('Error parsing front-matter:', error);
+    console.error('[wechatPub] Error parsing front-matter:', error);
+    markdownContent = content;
   }
 
   // 计算字数和阅读时间
   const { wordCount, readTime } = calculateReadingTime(markdownContent);
+  console.log('[wechatPub] Reading time calculated:', { wordCount, readTime });
 
   // 脚注数据
   const footnotes: [number, string, string][] = [];
@@ -164,151 +178,115 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
   // 配置 marked
   marked.setOptions({
     breaks: true,
+    gfm: true,
   });
 
-  // 自定义渲染器 - 使用对象字面量配合类型断言解决 TypeScript 类型问题
-  // marked v12 使用 token-based API，但 TypeScript 类型定义仍使用旧式签名
-  const renderer = Object.assign(new marked.Renderer(), {
-    heading(token: any): string {
-      const text = marked.parseInline(token.tokens) as string;
-      const tag = `h${token.depth}`;
-      return styledContent(tag, text);
-    },
+  // 不使用自定义 renderer，避免 marked v12 API 上下文问题
+  // 直接使用默认渲染，然后对 HTML 进行后处理添加样式类
 
-    paragraph(token: any): string {
-      const text = marked.parseInline(token.tokens) as string;
-      const isFigureImage = text.includes('<figure') && text.includes('<img');
-      const isEmpty = text.trim() === '';
-      if (isFigureImage || isEmpty) {
-        return text;
-      }
-      return styledContent('p', text);
-    },
+  // 渲染 Markdown
+  let html = '';
+  if (markdownContent && markdownContent.trim()) {
+    try {
+      html = marked.parse(markdownContent) as string;
+      console.log('[wechatPub] marked.parse result (raw):', {
+        htmlLength: html?.length || 0,
+        htmlPreview: html?.substring(0, 300) || '(empty)'
+      });
+    } catch (e) {
+      console.error('[wechatPub] marked.parse error:', e);
+      html = '';
+    }
+  } else {
+    console.log('[wechatPub] markdownContent is empty, skipping parse');
+  }
 
-    blockquote(token: any): string {
-      const text = marked.parse(token.tokens) as string;
-      return styledContent('blockquote', text);
-    },
-
-    code(token: any): string {
-      const lang = token.lang || '';
-      const langText = lang.split(' ')[0];
+  // 后处理：为代码块添加 Mac 风格标识和语法高亮
+  if (html) {
+    // 处理带语言标记的代码块
+    html = html.replace(/<pre><code class="language-([^"]*)">([\s\S]*?)<\/code><\/pre>/g, (match, lang, code) => {
+      const langText = (lang || '').split(' ')[0] || 'plaintext';
       const language = hljs.getLanguage(langText) ? langText : 'plaintext';
+
+      // 解码 HTML 实体
+      const decodedCode = code
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
 
       let highlighted: string;
       try {
-        highlighted = hljs.highlight(token.text, { language }).value;
+        highlighted = hljs.highlight(decodedCode, { language }).value;
       } catch {
-        highlighted = escapeHtml(token.text);
+        highlighted = escapeHtml(decodedCode);
       }
 
       const macSign = options.isMacCodeBlock
         ? `<span class="mac-sign" style="padding: 10px 14px 0;">${macCodeSvg}</span>`
         : '';
 
-      const code = `<code class="language-${escapeAttribute(lang)}">${highlighted}</code>`;
-      return `<pre class="hljs code__pre">${macSign}${code}</pre>`;
-    },
+      return `<pre class="hljs code__pre">${macSign}<code class="language-${escapeAttribute(lang)}">${highlighted}</code></pre>`;
+    });
 
-    codespan(token: any): string {
-      const escapedText = escapeHtml(token.text);
-      return styledContent('codespan', escapedText, 'code');
-    },
+    // 处理没有语言标记的代码块
+    html = html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (match, code) => {
+      const decodedCode = code
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
 
-    list(token: any): string {
-      const html = token.items.map((item: any) => renderer.listitem(item)).join('');
-      return styledContent(token.ordered ? 'ol' : 'ul', html);
-    },
+      const macSign = options.isMacCodeBlock
+        ? `<span class="mac-sign" style="padding: 10px 14px 0;">${macCodeSvg}</span>`
+        : '';
 
-    listitem(token: any): string {
-      let content: string;
-      try {
-        content = marked.parseInline(token.tokens) as string;
-      } catch {
-        content = (marked.parse(token.tokens) as string)
-          .replace(PARAGRAPH_WRAPPER_REGEX, '$1');
-      }
-      return styledContent('listitem', content, 'li');
-    },
+      return `<pre class="hljs code__pre">${macSign}<code class="language-plaintext">${escapeHtml(decodedCode)}</code></pre>`;
+    });
+  }
 
-    image(token: any): string {
-      const href = token.href || '';
-      const text = token.text || '';
-      const title = token.title;
-      const safeHref = escapeAttribute(href);
-      const safeText = escapeAttribute(text);
+  // 后处理：为图片添加 figure 包装
+  if (html) {
+    // 匹配 <img> 标签并包装为 figure
+    html = html.replace(/<img([^>]*)>/g, (match, attrs) => {
+      // 提取 alt 和 src
+      const altMatch = attrs.match(/alt="([^"]*)"/);
+      const srcMatch = attrs.match(/src="([^"]*)"/);
+      const titleMatch = attrs.match(/title="([^"]*)"/);
+
+      const alt = altMatch ? altMatch[1] : '';
+      const src = srcMatch ? srcMatch[1] : '';
+      const title = titleMatch ? titleMatch[1] : '';
+
+      const safeAlt = escapeAttribute(alt);
+      const safeSrc = escapeAttribute(src);
       const safeTitle = title ? escapeAttribute(title) : '';
-      const newText = options.legend ? transform(options.legend, text, title, href) : '';
-      const subText = newText ? styledContent('figcaption', newText) : '';
       const titleAttr = safeTitle ? ` title="${safeTitle}"` : '';
-      return `<figure><img src="${safeHref}"${titleAttr} alt="${safeText}"/>${subText}</figure>`;
-    },
 
-    link(token: any): string {
-      const href = token.href || '';
-      const text = token.text || '';
-      const title = token.title;
-      const safeHref = escapeAttribute(href);
-      const parsedText = marked.parseInline(token.tokens) as string;
-      const safeTitle = escapeAttribute(title || text);
+      // 如果有 legend 配置，添加 figcaption
+      const newText = options.legend ? transform(options.legend, alt, title, src) : '';
+      const subText = newText ? `<figcaption class="figcaption">${newText}</figcaption>` : '';
+
+      return `<figure><img src="${safeSrc}"${titleAttr} alt="${safeAlt}"/>${subText}</figure>`;
+    });
+  }
+
+  // 后处理：为链接添加微信公众号特殊处理
+  if (html && options.citeStatus) {
+    // 添加脚注处理（简化版：只处理非公众号链接）
+    html = html.replace(/<a href="([^"]*)"([^>]*)>([^<]*)<\/a>/g, (match, href, attrs, text) => {
       if (MP_WEIXIN_LINK_REGEX.test(href)) {
-        return `<a href="${safeHref}" title="${safeTitle}">${parsedText}</a>`;
+        return match;
       }
-      if (href === text) {
-        return parsedText;
+      if (href === text.trim()) {
+        return text;
       }
-      if (options.citeStatus) {
-        const ref = addFootnote(title || text, href);
-        return `<a href="${safeHref}" title="${safeTitle}">${parsedText}<sup>[${ref}]</sup></a>`;
-      }
-      return `<a href="${safeHref}" title="${safeTitle}">${parsedText}</a>`;
-    },
-
-    strong(token: any): string {
-      return styledContent('strong', marked.parseInline(token.tokens) as string);
-    },
-
-    em(token: any): string {
-      return styledContent('em', marked.parseInline(token.tokens) as string);
-    },
-
-    table(token: any): string {
-      const headerRow = token.header
-        .map((cell: any) => {
-          const text = marked.parseInline(cell.tokens) as string;
-          return styledContent('th', text, undefined, `text-align: ${cell.align || 'left'}`);
-        })
-        .join('');
-      const body = token.rows
-        .map((row: any) => {
-          const rowContent = row
-            .map((cell: any) => {
-              const text = marked.parseInline(cell.tokens) as string;
-              return styledContent('td', text, undefined, `text-align: ${cell.align || 'left'}`);
-            })
-            .join('');
-          return styledContent('tr', rowContent);
-        })
-        .join('');
-      return `
-        <section style="max-width: 100%; overflow: auto; -webkit-overflow-scrolling: touch">
-          <table class="preview-table">
-            <thead>${headerRow}</thead>
-            <tbody>${body}</tbody>
-          </table>
-        </section>
-      `;
-    },
-
-    hr(): string {
-      return '<hr class="hr hr-dash">';
-    },
-  });
-
-  marked.use({ renderer });
-
-  // 渲染 Markdown
-  let html = marked.parse(markdownContent) as string;
+      const ref = addFootnote(text, href);
+      return `<a href="${escapeAttribute(href)}"${attrs}>${text}<sup>[${ref}]</sup></a>`;
+    });
+  }
 
   // 添加字数统计
   if (options.countStatus && wordCount > 0) {
@@ -332,10 +310,20 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     html += styledContent('h4', '引用链接') + styledContent('footnotes', footnoteHtml, 'p');
   }
 
+  console.log('[wechatPub] Before DOMPurify:', {
+    htmlLength: html?.length || 0,
+    htmlPreview: html?.substring(0, 500) || '(empty)'
+  });
+
   // XSS 防护
   html = DOMPurify.sanitize(html, {
     ADD_TAGS: ['figure', 'figcaption', 'section'],
     ADD_ATTR: ['data-heading', 'class', 'style'],
+  });
+
+  console.log('[wechatPub] After DOMPurify:', {
+    htmlLength: html?.length || 0,
+    htmlPreview: html?.substring(0, 500) || '(empty)'
   });
 
   return {
