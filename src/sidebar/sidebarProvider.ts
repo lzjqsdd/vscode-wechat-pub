@@ -256,7 +256,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
   private getColorOptionChildren(): Promise<SidebarItem[]> {
     const currentColor = this.configStore.getPrimaryColor();
     const items = getColorOptions(currentColor);
-    return Promise.resolve(items.map(item => {
+    const result = items.map(item => {
       const sidebarItem = new SidebarItem(
         item.label,
         vscode.TreeItemCollapsibleState.None,
@@ -266,7 +266,24 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
       );
       sidebarItem.command = item.command;
       return sidebarItem;
-    }));
+    });
+
+    // 添加自定义颜色选项
+    result.push(new SidebarItem(
+      '🎨 自定义颜色...',
+      vscode.TreeItemCollapsibleState.None,
+      'setting-option',
+      'custom-color',
+      { key: 'custom-color', checked: false }
+    ));
+    // 设置自定义颜色的命令
+    result[result.length - 1].command = {
+      command: 'wechatPub.setCustomColor',
+      title: '自定义颜色',
+      arguments: []
+    };
+
+    return Promise.resolve(result);
   }
 
   /**

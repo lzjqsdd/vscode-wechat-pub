@@ -110,6 +110,35 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    // 自定义颜色命令（弹出颜色输入对话框）
+    vscode.commands.registerCommand('wechatPub.setCustomColor', async () => {
+      try {
+        const currentColor = configStore.getPrimaryColor();
+        const colorInput = await vscode.window.showInputBox({
+          prompt: '输入自定义主题色（HEX 格式，如 #FF6B6B）',
+          value: currentColor,
+          placeHolder: '#FF6B6B',
+          validateInput: (value) => {
+            // 验证是否为有效的 HEX 颜色
+            const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+            if (!hexPattern.test(value)) {
+              return '请输入有效的 HEX 颜色格式，如 #FF6B6B 或 #F00';
+            }
+            return null;
+          }
+        });
+
+        if (colorInput) {
+          configStore.setPrimaryColor(colorInput);
+          previewManager.refresh();
+          sidebarProvider.refresh();
+          vscode.window.showInformationMessage(`自定义主题色已设置为: ${colorInput}`);
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置自定义颜色失败: ${(error as Error).message}`);
+      }
+    }),
+
     // 切换开关选项命令
     vscode.commands.registerCommand('wechatPub.toggleOption', async (key: string) => {
       try {
