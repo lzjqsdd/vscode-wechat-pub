@@ -20,7 +20,8 @@ import {
   getFontFamilyOptions,
   getFontSizeOptions,
   getCodeBlockToggleOptions,
-  getParagraphToggleOptions
+  getParagraphToggleOptions,
+  getWidthOptions
 } from './settingItems';
 
 /**
@@ -179,6 +180,9 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
 
     for (const childKey of group.children) {
       switch (childKey) {
+        case 'previewWidth':
+          // 直接返回选项，不需要二级分组
+          return this.getWidthOptionChildren();
         case 'theme':
           children.push(new SidebarItem('主题', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'theme'));
           break;
@@ -356,6 +360,25 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
         'setting-option',
         item.value,
         { key: 'fontSize', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取预览宽度选项子节点（直接返回，无二级分组）
+   */
+  private getWidthOptionChildren(): Promise<SidebarItem[]> {
+    const currentWidth = this.configStore.getPreviewWidth();
+    const items = getWidthOptions(currentWidth);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'previewWidth', checked: item.checked || false }
       );
       sidebarItem.command = item.command;
       return sidebarItem;

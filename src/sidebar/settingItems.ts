@@ -62,6 +62,16 @@ export const LEGEND_OPTIONS = [
   { label: '不显示', value: 'none', icon: '🚫', desc: '不显示图注' }
 ];
 
+// ==================== 预览模式 ====================
+
+/**
+ * 预览宽度选项（移动端/电脑端）
+ */
+export const WIDTH_OPTIONS = [
+  { label: '📱 移动端', value: 'mobile', desc: '固定宽度 375px，模拟手机预览' },
+  { label: '🖥️ 电脑端', value: 'desktop', desc: '自适应宽度，适合电脑浏览' }
+];
+
 // ==================== 字体字号 ====================
 
 /**
@@ -142,6 +152,7 @@ export const PARAGRAPH_TOGGLES = [
  * 设置分组
  */
 export const SETTING_GROUPS = [
+  { label: '📱 预览模式', key: 'preview-group', children: ['previewWidth'] },
   { label: '🎨 排版主题', key: 'theme-group', children: ['theme', 'color', 'codeBlockTheme', 'legend'] },
   { label: '🖥️ 代码块', key: 'code-block-group', children: ['codeBlockToggles'] },
   { label: '📝 段落排版', key: 'paragraph-group', children: ['paragraphToggles'] },
@@ -244,6 +255,24 @@ export function getLegendOptions(currentLegend: string): SettingItem[] {
       command: 'wechatPub.setLegend',
       title: '设置图注格式',
       arguments: [l.value]
+    }
+  ));
+}
+
+/**
+ * 获取预览宽度选项列表
+ */
+export function getWidthOptions(currentWidth: string): SettingItem[] {
+  return WIDTH_OPTIONS.map(w => new SettingItem(
+    w.label,
+    vscode.TreeItemCollapsibleState.None,
+    'width-option',
+    w.value,
+    currentWidth === w.value,
+    {
+      command: 'wechatPub.setPreviewWidth',
+      title: '设置预览模式',
+      arguments: [w.value]
     }
   ));
 }

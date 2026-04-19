@@ -157,7 +157,7 @@ export class PreviewManager {
     });
 
     // 更新 Webview 内容
-    this.panel.webview.html = generateWebviewHtml(html, css, vscodeThemeKind);
+    this.panel.webview.html = generateWebviewHtml(html, css, vscodeThemeKind, this.configStore.getPreviewWidth());
   }
 
   /**

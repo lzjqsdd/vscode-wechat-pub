@@ -236,6 +236,19 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    // 设置预览宽度命令
+    vscode.commands.registerCommand('wechatPub.setPreviewWidth', async (mode: string) => {
+      try {
+        configStore.setPreviewWidth(mode);
+        previewManager.refresh();
+        sidebarProvider.refresh();
+        const modeText = mode === 'mobile' ? '移动端（375px）' : '电脑端（自适应）';
+        vscode.window.showInformationMessage(`预览模式已设置为: ${modeText}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置预览模式失败: ${(error as Error).message}`);
+      }
+    }),
+
     // 打开草稿文件命令
     vscode.commands.registerCommand('wechatPub.openDraft', async (filePath: string) => {
       try {

@@ -286,4 +286,20 @@ export class ConfigStore {
   setFontSize(fontSize: string): void {
     this.context.workspaceState.update('fontSize', fontSize);
   }
+
+  /**
+   * 获取预览宽度模式
+   * @returns 'mobile' 或 'desktop'
+   */
+  getPreviewWidth(): string {
+    return this.context.workspaceState.get('previewWidth', 'mobile');
+  }
+
+  /**
+   * 设置预览宽度模式
+   * @param mode 'mobile' 或 'desktop'
+   */
+  setPreviewWidth(mode: string): void {
+    this.context.workspaceState.update('previewWidth', mode);
+  }
 }
