@@ -28,50 +28,66 @@ export class Publisher {
   }
 
   async publish(editor: vscode.TextEditor): Promise<void> {
-    const filePath = editor.document.uri.fsPath;
-    const content = editor.document.getText();
-    const { html, yamlData } = renderMarkdown(content, {
-      countStatus: this.configStore.getCountStatus(),
-      isMacCodeBlock: this.configStore.getMacCodeBlock()
-    });
-
-    const title = yamlData.title || this.extractTitle(content) || '未命名文章';
-
-    // 生成公众号格式 HTML
-    const theme = this.configStore.getTheme() as ThemeName;
-    const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
-    const wechatHtml = copyWechatHtml(html, css);
-
-    // 检查是否已有草稿
-    const existingMediaId = this.draftStore.getMediaId(filePath);
-
-    try {
-      if (existingMediaId) {
-        await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
-        vscode.window.showInformationMessage(`草稿更新成功`);
-      } else {
-        const mediaId = await this.api.addDraft(title, wechatHtml);
-        this.draftStore.associate(filePath, mediaId, title);
-        vscode.window.showInformationMessage(`发布到草稿箱成功`);
-      }
-    } catch (error) {
-      vscode.window.showErrorMessage(`发布失败: ${(error as Error).message}`);
+    // 配置校验
+    if (!this.configStore.isWechatConfigured()) {
+      vscode.window.showErrorMessage('请先配置微信公众号 AppID 和 AppSecret');
+      return;
     }
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: '发布到公众号草稿箱...',
+      cancellable: false
+    }, async () => {
+      const filePath = editor.document.uri.fsPath;
+      const content = editor.document.getText();
+      const { html, yamlData } = renderMarkdown(content, {
+        countStatus: this.configStore.getCountStatus(),
+        isMacCodeBlock: this.configStore.getMacCodeBlock()
+      });
+
+      const title = yamlData.title || this.extractTitle(content) || '未命名文章';
+
+      // 生成公众号格式 HTML
+      const theme = this.configStore.getTheme() as ThemeName;
+      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const wechatHtml = copyWechatHtml(html, css);
+
+      // 检查是否已有草稿
+      const existingMediaId = this.draftStore.getMediaId(filePath);
+
+      try {
+        if (existingMediaId) {
+          await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
+          vscode.window.showInformationMessage(`草稿更新成功`);
+        } else {
+          const mediaId = await this.api.addDraft(title, wechatHtml);
+          this.draftStore.associate(filePath, mediaId, title);
+          vscode.window.showInformationMessage(`发布到草稿箱成功`);
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`发布失败: ${(error as Error).message}`);
+      }
+    });
   }
 
   async copyHtml(editor: vscode.TextEditor): Promise<void> {
-    const content = editor.document.getText();
-    const { html } = renderMarkdown(content, {
-      countStatus: this.configStore.getCountStatus(),
-      isMacCodeBlock: this.configStore.getMacCodeBlock()
-    });
+    try {
+      const content = editor.document.getText();
+      const { html } = renderMarkdown(content, {
+        countStatus: this.configStore.getCountStatus(),
+        isMacCodeBlock: this.configStore.getMacCodeBlock()
+      });
 
-    const theme = this.configStore.getTheme() as ThemeName;
-    const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
-    const wechatHtml = copyWechatHtml(html, css);
+      const theme = this.configStore.getTheme() as ThemeName;
+      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const wechatHtml = copyWechatHtml(html, css);
 
-    await vscode.env.clipboard.writeText(wechatHtml);
-    vscode.window.showInformationMessage('公众号格式 HTML 已复制到剪贴板');
+      await vscode.env.clipboard.writeText(wechatHtml);
+      vscode.window.showInformationMessage('公众号格式 HTML 已复制到剪贴板');
+    } catch (error) {
+      vscode.window.showErrorMessage(`复制失败: ${(error as Error).message}`);
+    }
   }
 
   private extractTitle(content: string): string | undefined {
