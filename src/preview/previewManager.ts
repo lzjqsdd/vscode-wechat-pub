@@ -18,6 +18,7 @@ export class PreviewManager {
   private themeManager: ThemeManager;
   private configStore: ConfigStore;
   private disposables: vscode.Disposable[] = [];
+  private _isDisposed = false;
 
   constructor(
     private extensionUri: vscode.Uri,
@@ -52,9 +53,7 @@ export class PreviewManager {
 
     // 监听面板关闭事件
     this.panel.onDidDispose(() => {
-      this.panel = undefined;
-      this.disposables.forEach(d => d.dispose());
-      this.disposables = [];
+      this._cleanup();
     });
 
     // 初始更新
@@ -117,11 +116,21 @@ export class PreviewManager {
   }
 
   /**
+   * 统一的清理逻辑
+   * 防止重复 dispose
+   */
+  private _cleanup(): void {
+    if (this._isDisposed) return;
+    this._isDisposed = true;
+    this.panel = undefined;
+    this.disposables.forEach(d => d.dispose());
+    this.disposables = [];
+  }
+
+  /**
    * 销毁管理器，清理资源
    */
   dispose(): void {
-    this.panel?.dispose();
-    this.disposables.forEach(d => d.dispose());
-    this.disposables = [];
+    this._cleanup();
   }
 }

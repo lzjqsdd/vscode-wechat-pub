@@ -15,6 +15,7 @@ export type ThemeName = typeof THEMES[number];
  */
 export class ThemeManager {
   private extensionPath: string;
+  private cssCache: Map<string, string> = new Map();
 
   constructor(extensionPath: string) {
     this.extensionPath = extensionPath;
@@ -41,14 +42,19 @@ export class ThemeManager {
   }
 
   /**
-   * 加载 CSS 文件内容
+   * 加载 CSS 文件内容（带缓存）
    * @param filename CSS 文件名
    * @returns CSS 内容
    */
   private loadCSS(filename: string): string {
+    if (this.cssCache.has(filename)) {
+      return this.cssCache.get(filename)!;
+    }
     const filepath = path.join(this.extensionPath, 'themes', filename);
     try {
-      return fs.readFileSync(filepath, 'utf-8');
+      const css = fs.readFileSync(filepath, 'utf-8');
+      this.cssCache.set(filename, css);
+      return css;
     } catch (error) {
       console.error(`Failed to load CSS file: ${filename}`, error);
       return '';
