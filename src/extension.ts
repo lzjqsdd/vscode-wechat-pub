@@ -113,19 +113,97 @@ export function activate(context: vscode.ExtensionContext) {
     // 切换开关选项命令
     vscode.commands.registerCommand('wechatPub.toggleOption', async (key: string) => {
       try {
-        if (key === 'isMacCodeBlock') {
-          const current = configStore.getMacCodeBlock();
-          configStore.setMacCodeBlock(!current);
-          vscode.window.showInformationMessage(`Mac 风格代码块: ${!current ? '开启' : '关闭'}`);
-        } else if (key === 'countStatus') {
-          const current = configStore.getCountStatus();
-          configStore.setCountStatus(!current);
-          vscode.window.showInformationMessage(`字数统计: ${!current ? '开启' : '关闭'}`);
+        let message = '';
+        switch (key) {
+          case 'isMacCodeBlock':
+            const macCurrent = configStore.getMacCodeBlock();
+            configStore.setMacCodeBlock(!macCurrent);
+            message = `Mac 风格代码块: ${!macCurrent ? '开启' : '关闭'}`;
+            break;
+          case 'countStatus':
+            const countCurrent = configStore.getCountStatus();
+            configStore.setCountStatus(!countCurrent);
+            message = `字数统计: ${!countCurrent ? '开启' : '关闭'}`;
+            break;
+          case 'isShowLineNumber':
+            const lineNumCurrent = configStore.getShowLineNumber();
+            configStore.setShowLineNumber(!lineNumCurrent);
+            message = `代码块行号: ${!lineNumCurrent ? '开启' : '关闭'}`;
+            break;
+          case 'isCiteStatus':
+            const citeCurrent = configStore.getCiteStatus();
+            configStore.setCiteStatus(!citeCurrent);
+            message = `微信外链转底部引用: ${!citeCurrent ? '开启' : '关闭'}`;
+            break;
+          case 'isUseIndent':
+            const indentCurrent = configStore.getUseIndent();
+            configStore.setUseIndent(!indentCurrent);
+            message = `首行缩进: ${!indentCurrent ? '开启' : '关闭'}`;
+            break;
+          case 'isUseJustify':
+            const justifyCurrent = configStore.getUseJustify();
+            configStore.setUseJustify(!justifyCurrent);
+            message = `两端对齐: ${!justifyCurrent ? '开启' : '关闭'}`;
+            break;
+          default:
+            vscode.window.showWarningMessage(`未知的配置项: ${key}`);
+            return;
         }
+        vscode.window.showInformationMessage(message);
         previewManager.refresh();
         sidebarProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(`切换选项失败: ${(error as Error).message}`);
+      }
+    }),
+
+    // 设置代码块主题命令
+    vscode.commands.registerCommand('wechatPub.setCodeBlockTheme', async (themeUrl: string) => {
+      try {
+        configStore.setCodeBlockTheme(themeUrl);
+        previewManager.refresh();
+        sidebarProvider.refresh();
+        // 从 URL 提取主题名称显示
+        const themeName = themeUrl.split('/').pop()?.replace('.min.css', '') || themeUrl;
+        vscode.window.showInformationMessage(`代码块主题已设置为: ${themeName}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置代码块主题失败: ${(error as Error).message}`);
+      }
+    }),
+
+    // 设置图注格式命令
+    vscode.commands.registerCommand('wechatPub.setLegend', async (legend: string) => {
+      try {
+        configStore.setLegend(legend);
+        previewManager.refresh();
+        sidebarProvider.refresh();
+        vscode.window.showInformationMessage(`图注格式已设置为: ${legend}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置图注格式失败: ${(error as Error).message}`);
+      }
+    }),
+
+    // 设置字体命令
+    vscode.commands.registerCommand('wechatPub.setFontFamily', async (fontFamily: string) => {
+      try {
+        configStore.setFontFamily(fontFamily);
+        previewManager.refresh();
+        sidebarProvider.refresh();
+        vscode.window.showInformationMessage(`字体已设置`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置字体失败: ${(error as Error).message}`);
+      }
+    }),
+
+    // 设置字号命令
+    vscode.commands.registerCommand('wechatPub.setFontSize', async (fontSize: string) => {
+      try {
+        configStore.setFontSize(fontSize);
+        previewManager.refresh();
+        sidebarProvider.refresh();
+        vscode.window.showInformationMessage(`字号已设置为: ${fontSize}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`设置字号失败: ${(error as Error).message}`);
       }
     }),
 

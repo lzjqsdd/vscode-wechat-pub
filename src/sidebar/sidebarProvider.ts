@@ -2,7 +2,7 @@
  * 侧边栏 TreeDataProvider
  * 提供多层级快捷操作面板：
  * - 快捷操作（发布、复制、更新）
- * - 设置（主题、颜色、开关）
+ * - 设置（排版主题、代码块、段落排版、字体字号）
  * - 已发布草稿列表
  */
 
@@ -10,13 +10,24 @@ import * as vscode from 'vscode';
 import { ConfigStore } from '../storage/configStore';
 import { DraftMappingStore, DraftMapping } from '../storage/draftMapping';
 import { getActionItems, ActionItem } from './actionItems';
-import { SettingItem, getThemeOptions, getColorOptions, getToggleOptions } from './settingItems';
+import {
+  SettingItem,
+  SETTING_GROUPS,
+  getThemeOptions,
+  getColorOptions,
+  getCodeBlockThemeOptions,
+  getLegendOptions,
+  getFontFamilyOptions,
+  getFontSizeOptions,
+  getCodeBlockToggleOptions,
+  getParagraphToggleOptions
+} from './settingItems';
 
 /**
  * 节点类型
  */
 type NodeType = 'group-action' | 'group-setting' | 'group-draft'
-  | 'action' | 'setting-group' | 'setting-option' | 'draft-item';
+  | 'action' | 'setting-group' | 'setting-subgroup' | 'setting-option' | 'draft-item';
 
 /**
  * 侧边栏节点
@@ -46,6 +57,8 @@ export class SidebarItem extends vscode.TreeItem {
         return new vscode.ThemeIcon('folder');
       case 'setting-group':
         return new vscode.ThemeIcon('chevron-right');
+      case 'setting-subgroup':
+        return new vscode.ThemeIcon('list-unordered');
       case 'draft-item':
         return new vscode.ThemeIcon('file-text');
       default:
@@ -108,7 +121,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
         return this.getDraftChildren();
 
       case 'setting-group':
-        return this.getSettingOptionChildren(element.label);
+        return this.getSettingSubgroupChildren(element);
+
+      case 'setting-subgroup':
+        return this.getSettingOptionChildren(element.value || '');
 
       default:
         return Promise.resolve([]);
@@ -135,70 +151,245 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
   }
 
   /**
-   * 获取设置子节点
+   * 获取设置子节点（一级分组）
    */
   private getSettingChildren(): Promise<SidebarItem[]> {
-    return Promise.resolve([
-      new SidebarItem('🎨 主题', vscode.TreeItemCollapsibleState.Collapsed, 'setting-group', 'theme'),
-      new SidebarItem('🖍️ 主题色', vscode.TreeItemCollapsibleState.Collapsed, 'setting-group', 'color'),
-      new SidebarItem('🔢 其他选项', vscode.TreeItemCollapsibleState.Collapsed, 'setting-group', 'toggle')
-    ]);
+    return Promise.resolve(SETTING_GROUPS.map(group =>
+      new SidebarItem(
+        group.label,
+        vscode.TreeItemCollapsibleState.Collapsed,
+        'setting-group',
+        group.key
+      )
+    ));
+  }
+
+  /**
+   * 获取设置二级分组子节点
+   */
+  private getSettingSubgroupChildren(element: SidebarItem): Promise<SidebarItem[]> {
+    const groupKey = element.value || '';
+    const group = SETTING_GROUPS.find(g => g.key === groupKey);
+
+    if (!group) {
+      return Promise.resolve([]);
+    }
+
+    // 根据分组类型返回对应的选项分组
+    const children: SidebarItem[] = [];
+
+    for (const childKey of group.children) {
+      switch (childKey) {
+        case 'theme':
+          children.push(new SidebarItem('主题', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'theme'));
+          break;
+        case 'color':
+          children.push(new SidebarItem('主题色', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'color'));
+          break;
+        case 'codeBlockTheme':
+          children.push(new SidebarItem('代码块主题', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'codeBlockTheme'));
+          break;
+        case 'legend':
+          children.push(new SidebarItem('图注格式', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'legend'));
+          break;
+        case 'codeBlockToggles':
+          // 直接返回选项，不需要二级分组
+          return this.getCodeBlockToggleChildren();
+        case 'paragraphToggles':
+          // 直接返回选项，不需要二级分组
+          return this.getParagraphToggleChildren();
+        case 'fontFamily':
+          children.push(new SidebarItem('字体', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'fontFamily'));
+          break;
+        case 'fontSize':
+          children.push(new SidebarItem('字号', vscode.TreeItemCollapsibleState.Collapsed, 'setting-subgroup', 'fontSize'));
+          break;
+      }
+    }
+
+    return Promise.resolve(children);
   }
 
   /**
    * 获取设置选项子节点
    */
-  private getSettingOptionChildren(groupLabel: string): Promise<SidebarItem[]> {
-    if (groupLabel.includes('主题') && !groupLabel.includes('色')) {
-      const currentTheme = this.configStore.getTheme();
-      const items = getThemeOptions(currentTheme);
-      return Promise.resolve(items.map(item => {
-        const sidebarItem = new SidebarItem(
-          item.label,
-          vscode.TreeItemCollapsibleState.None,
-          'setting-option',
-          item.value
-        );
-        sidebarItem.command = item.command;
-        return sidebarItem;
-      }));
+  private getSettingOptionChildren(subgroupKey: string): Promise<SidebarItem[]> {
+    switch (subgroupKey) {
+      case 'theme':
+        return this.getThemeOptionChildren();
+      case 'color':
+        return this.getColorOptionChildren();
+      case 'codeBlockTheme':
+        return this.getCodeBlockThemeOptionChildren();
+      case 'legend':
+        return this.getLegendOptionChildren();
+      case 'fontFamily':
+        return this.getFontFamilyOptionChildren();
+      case 'fontSize':
+        return this.getFontSizeOptionChildren();
+      default:
+        return Promise.resolve([]);
     }
+  }
 
-    if (groupLabel.includes('主题色')) {
-      const currentColor = this.configStore.getPrimaryColor();
-      const items = getColorOptions(currentColor);
-      return Promise.resolve(items.map(item => {
-        const sidebarItem = new SidebarItem(
-          item.label,
-          vscode.TreeItemCollapsibleState.None,
-          'setting-option',
-          item.value
-        );
-        sidebarItem.command = item.command;
-        return sidebarItem;
-      }));
-    }
+  /**
+   * 获取主题选项子节点
+   */
+  private getThemeOptionChildren(): Promise<SidebarItem[]> {
+    const currentTheme = this.configStore.getTheme();
+    const items = getThemeOptions(currentTheme);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'theme', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
 
-    if (groupLabel.includes('其他')) {
-      const config = {
-        isMacCodeBlock: this.configStore.getMacCodeBlock(),
-        countStatus: this.configStore.getCountStatus()
-      };
-      const items = getToggleOptions(config);
-      return Promise.resolve(items.map(item => {
-        const sidebarItem = new SidebarItem(
-          item.label,
-          vscode.TreeItemCollapsibleState.None,
-          'setting-option',
-          item.value,
-          { key: item.value || '', checked: item.checked || false }
-        );
-        sidebarItem.command = item.command;
-        return sidebarItem;
-      }));
-    }
+  /**
+   * 获取颜色选项子节点
+   */
+  private getColorOptionChildren(): Promise<SidebarItem[]> {
+    const currentColor = this.configStore.getPrimaryColor();
+    const items = getColorOptions(currentColor);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'color', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
 
-    return Promise.resolve([]);
+  /**
+   * 获取代码块主题选项子节点
+   */
+  private getCodeBlockThemeOptionChildren(): Promise<SidebarItem[]> {
+    const currentTheme = this.configStore.getCodeBlockTheme();
+    const items = getCodeBlockThemeOptions(currentTheme);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'codeBlockTheme', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取图注格式选项子节点
+   */
+  private getLegendOptionChildren(): Promise<SidebarItem[]> {
+    const currentLegend = this.configStore.getLegend();
+    const items = getLegendOptions(currentLegend);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'legend', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取字体选项子节点
+   */
+  private getFontFamilyOptionChildren(): Promise<SidebarItem[]> {
+    const currentFont = this.configStore.getFontFamily();
+    const items = getFontFamilyOptions(currentFont);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'fontFamily', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取字号选项子节点
+   */
+  private getFontSizeOptionChildren(): Promise<SidebarItem[]> {
+    const currentSize = this.configStore.getFontSize();
+    const items = getFontSizeOptions(currentSize);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: 'fontSize', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取代码块开关选项子节点（直接返回，无二级分组）
+   */
+  private getCodeBlockToggleChildren(): Promise<SidebarItem[]> {
+    const config = {
+      isMacCodeBlock: this.configStore.getMacCodeBlock(),
+      isShowLineNumber: this.configStore.getShowLineNumber()
+    };
+    const items = getCodeBlockToggleOptions(config);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: item.value || '', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
+  }
+
+  /**
+   * 获取段落排版开关选项子节点（直接返回，无二级分组）
+   */
+  private getParagraphToggleChildren(): Promise<SidebarItem[]> {
+    const config = {
+      isUseIndent: this.configStore.getUseIndent(),
+      isUseJustify: this.configStore.getUseJustify(),
+      countStatus: this.configStore.getCountStatus(),
+      isCiteStatus: this.configStore.getCiteStatus()
+    };
+    const items = getParagraphToggleOptions(config);
+    return Promise.resolve(items.map(item => {
+      const sidebarItem = new SidebarItem(
+        item.label,
+        vscode.TreeItemCollapsibleState.None,
+        'setting-option',
+        item.value,
+        { key: item.value || '', checked: item.checked || false }
+      );
+      sidebarItem.command = item.command;
+      return sidebarItem;
+    }));
   }
 
   /**

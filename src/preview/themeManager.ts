@@ -26,9 +26,20 @@ export class ThemeManager {
    * @param theme 主题名称
    * @param primaryColor 主色调
    * @param vscodeThemeKind VSCode 颜色主题类型（light/dark）
+   * @param options 额外选项（字体、字号、缩进、对齐）
    * @returns 合并后的 CSS 字符串
    */
-  getThemeCSS(theme: ThemeName, primaryColor: string, vscodeThemeKind: string = 'light'): string {
+  getThemeCSS(
+    theme: ThemeName,
+    primaryColor: string,
+    vscodeThemeKind: string = 'light',
+    options: {
+      fontFamily?: string;
+      fontSize?: string;
+      useIndent?: boolean;
+      useJustify?: boolean;
+    } = {}
+  ): string {
     const baseCSS = this.loadCSS('base.css');
     const defaultCSS = this.loadCSS('default.css');
 
@@ -38,15 +49,42 @@ export class ThemeManager {
     const previewContentBackground = isDark ? '#252526' : '#ffffff';
     const previewText = isDark ? '#cccccc' : '#333333';
 
+    // 字体和字号设置
+    const fontFamily = options.fontFamily || '-apple-system-font,BlinkMacSystemFont, Helvetica Neue, PingFang SC, Hiragino Sans GB , Microsoft YaHei UI , Microsoft YaHei ,Arial,sans-serif';
+    const fontSize = options.fontSize || '16px';
+
+    // 构建额外的段落样式
+    let paragraphExtraCSS = '';
+    if (options.useIndent) {
+      paragraphExtraCSS += `
+p {
+  text-indent: 2em;
+}`;
+    }
+    if (options.useJustify) {
+      paragraphExtraCSS += `
+p {
+  text-align: justify;
+}`;
+    }
+
     const variables = `
 :root {
   --md-primary-color: ${primaryColor};
-  --md-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --md-font-size: 14px;
+  --md-font-family: ${fontFamily};
+  --md-font-size: ${fontSize};
   --md-preview-bg: ${previewBackground};
   --md-content-bg: ${previewContentBackground};
   --md-text-color: ${previewText};
-}`;
+}
+
+/* 应用字体和字号 */
+section, container, #output {
+  font-family: var(--md-font-family);
+  font-size: var(--md-font-size);
+}
+
+${paragraphExtraCSS}`;
 
     // md 项目主题组合逻辑：default.css 作为基础，grace/simple.css 叠加
     if (theme === 'default') {

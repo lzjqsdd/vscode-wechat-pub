@@ -141,13 +141,20 @@ export class PreviewManager {
     const { html } = renderMarkdown(content, {
       countStatus: this.configStore.getCountStatus(),
       isMacCodeBlock: this.configStore.getMacCodeBlock(),
+      citeStatus: this.configStore.getCiteStatus(),
+      legend: this.configStore.getLegend(),
     });
 
     // 获取主题和颜色配置
     const theme = this.configStore.getTheme() as ThemeName;
     const color = this.configStore.getPrimaryColor();
     const vscodeThemeKind = this.getVSCodeThemeKind();
-    const css = this.themeManager.getThemeCSS(theme, color, vscodeThemeKind);
+    const css = this.themeManager.getThemeCSS(theme, color, vscodeThemeKind, {
+      fontFamily: this.configStore.getFontFamily(),
+      fontSize: this.configStore.getFontSize(),
+      useIndent: this.configStore.getUseIndent(),
+      useJustify: this.configStore.getUseJustify(),
+    });
 
     // 更新 Webview 内容
     this.panel.webview.html = generateWebviewHtml(html, css, vscodeThemeKind);
@@ -175,11 +182,18 @@ export class PreviewManager {
       const { html } = renderMarkdown(content, {
         countStatus: this.configStore.getCountStatus(),
         isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
       });
       const theme = this.configStore.getTheme() as ThemeName;
       const color = this.configStore.getPrimaryColor();
       const vscodeThemeKind = this.getVSCodeThemeKind();
-      const css = this.themeManager.getThemeCSS(theme, color, vscodeThemeKind);
+      const css = this.themeManager.getThemeCSS(theme, color, vscodeThemeKind, {
+        fontFamily: this.configStore.getFontFamily(),
+        fontSize: this.configStore.getFontSize(),
+        useIndent: this.configStore.getUseIndent(),
+        useJustify: this.configStore.getUseJustify(),
+      });
       this.panel.webview.html = generateWebviewHtml(html, css, vscodeThemeKind);
       return;
     }

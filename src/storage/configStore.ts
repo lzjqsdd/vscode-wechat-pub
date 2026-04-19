@@ -156,4 +156,134 @@ export class ConfigStore {
     const { appId, appSecret } = this.getWechatConfig();
     return Boolean(appId && appSecret);
   }
+
+  // ==================== 新增配置项（同步 md 项目） ====================
+
+  /**
+   * 获取代码块主题 URL
+   * @returns 代码块主题 URL
+   */
+  getCodeBlockTheme(): string {
+    return this.context.workspaceState.get('codeBlockTheme', 'https://cdn-doocs.oss-cn-shenzhen.aliyuncs.com/npm/highlightjs/11.11.1/styles/github.min.css');
+  }
+
+  /**
+   * 设置代码块主题 URL
+   * @param theme 主题 URL
+   */
+  setCodeBlockTheme(theme: string): void {
+    this.context.workspaceState.update('codeBlockTheme', theme);
+  }
+
+  /**
+   * 获取图注格式
+   * @returns 图注格式值
+   */
+  getLegend(): string {
+    return this.context.workspaceState.get('legend', 'alt');
+  }
+
+  /**
+   * 设置图注格式
+   * @param legend 图注格式值
+   */
+  setLegend(legend: string): void {
+    this.context.workspaceState.update('legend', legend);
+  }
+
+  /**
+   * 获取是否显示代码块行号
+   * @returns 是否启用
+   */
+  getShowLineNumber(): boolean {
+    return this.context.workspaceState.get('isShowLineNumber', false);
+  }
+
+  /**
+   * 设置是否显示代码块行号
+   * @param value 是否启用
+   */
+  setShowLineNumber(value: boolean): void {
+    this.context.workspaceState.update('isShowLineNumber', value);
+  }
+
+  /**
+   * 获取微信外链转底部引用状态
+   * @returns 是否启用
+   */
+  getCiteStatus(): boolean {
+    return this.context.workspaceState.get('isCiteStatus', false);
+  }
+
+  /**
+   * 设置微信外链转底部引用状态
+   * @param value 是否启用
+   */
+  setCiteStatus(value: boolean): void {
+    this.context.workspaceState.update('isCiteStatus', value);
+  }
+
+  /**
+   * 获取段落首行缩进状态
+   * @returns 是否启用
+   */
+  getUseIndent(): boolean {
+    return this.context.workspaceState.get('isUseIndent', false);
+  }
+
+  /**
+   * 设置段落首行缩进状态
+   * @param value 是否启用
+   */
+  setUseIndent(value: boolean): void {
+    this.context.workspaceState.update('isUseIndent', value);
+  }
+
+  /**
+   * 获取段落两端对齐状态
+   * @returns 是否启用
+   */
+  getUseJustify(): boolean {
+    return this.context.workspaceState.get('isUseJustify', false);
+  }
+
+  /**
+   * 设置段落两端对齐状态
+   * @param value 是否启用
+   */
+  setUseJustify(value: boolean): void {
+    this.context.workspaceState.update('isUseJustify', value);
+  }
+
+  /**
+   * 获取字体设置
+   * @returns 字体值
+   */
+  getFontFamily(): string {
+    return this.context.workspaceState.get('fontFamily', '-apple-system-font,BlinkMacSystemFont, Helvetica Neue, PingFang SC, Hiragino Sans GB , Microsoft YaHei UI , Microsoft YaHei ,Arial,sans-serif');
+  }
+
+  /**
+   * 设置字体
+   * @param fontFamily 字体值
+   */
+  setFontFamily(fontFamily: string): void {
+    this.context.workspaceState.update('fontFamily', fontFamily);
+  }
+
+  /**
+   * 获取字号设置
+   * @returns 字号值
+   */
+  getFontSize(): string {
+    return this.context.workspaceState.get('fontSize', '16px');
+  }
+
+  /**
+   * 设置字号
+   * @param fontSize 字号值
+   */
+  setFontSize(fontSize: string): void {
+    this.context.workspaceState.update('fontSize', fontSize);
+  }
 }
