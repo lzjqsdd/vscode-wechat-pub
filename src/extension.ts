@@ -10,6 +10,7 @@ import { ConfigStore } from './storage/configStore';
 import { DraftMappingStore } from './storage/draftMapping';
 import { SidebarProvider } from './sidebar/sidebarProvider';
 import { ImageUploadService } from './wechat/imageUpload';
+import { showColorPickerPanel } from './preview/colorPickerPanel';
 
 /**
  * 插件激活入口
@@ -110,65 +111,16 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // 自定义颜色命令（弹出颜色选择面板）
+    // 自定义颜色命令（弹出颜色选择画板）
     vscode.commands.registerCommand('wechatPub.setCustomColor', async () => {
       try {
         const currentColor = configStore.getPrimaryColor();
-
-        // 先显示预设颜色列表，同时提供手动输入选项
-        const colorOptions = [
-          { label: '$(edit) 手动输入颜色码...', description: '输入 HEX 格式，如 #FF6B6B' },
-          { label: '🎨 经典蓝', description: '#0F4C81', detail: currentColor === '#0F4C81' ? '✓ 当前' : '' },
-          { label: '🎨 翡翠绿', description: '#009874', detail: currentColor === '#009874' ? '✓ 当前' : '' },
-          { label: '🎨 活力橘', description: '#FA5151', detail: currentColor === '#FA5151' ? '✓ 当前' : '' },
-          { label: '🎨 柠檬黄', description: '#FECE00', detail: currentColor === '#FECE00' ? '✓ 当前' : '' },
-          { label: '🎨 薰衣紫', description: '#92617E', detail: currentColor === '#92617E' ? '✓ 当前' : '' },
-          { label: '🎨 天空蓝', description: '#55C9EA', detail: currentColor === '#55C9EA' ? '✓ 当前' : '' },
-          { label: '🎨 玫瑰金', description: '#B76E79', detail: currentColor === '#B76E79' ? '✓ 当前' : '' },
-          { label: '🎨 橄榄绿', description: '#556B2F', detail: currentColor === '#556B2F' ? '✓ 当前' : '' },
-          { label: '🎨 石墨黑', description: '#333333', detail: currentColor === '#333333' ? '✓ 当前' : '' },
-          { label: '🎨 雾烟灰', description: '#A9A9A9', detail: currentColor === '#A9A9A9' ? '✓ 当前' : '' },
-          { label: '🎨 樱花粉', description: '#FFB7C5', detail: currentColor === '#FFB7C5' ? '✓ 当前' : '' }
-        ];
-
-        const selected = await vscode.window.showQuickPick(colorOptions, {
-          placeHolder: '选择或输入自定义主题色',
-          title: '自定义颜色'
+        showColorPickerPanel(currentColor, (color: string) => {
+          configStore.setPrimaryColor(color);
+          previewManager.refresh();
+          sidebarProvider.refresh();
+          vscode.window.showInformationMessage(`主题色已设置为: ${color}`);
         });
-
-        if (!selected) {
-          return; // 用户取消
-        }
-
-        let colorValue: string;
-
-        if (selected.label.includes('手动输入')) {
-          // 用户选择手动输入
-          const colorInput = await vscode.window.showInputBox({
-            prompt: '输入自定义主题色（HEX 格式）',
-            value: currentColor,
-            placeHolder: '#FF6B6B',
-            validateInput: (value) => {
-              const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-              if (!hexPattern.test(value)) {
-                return '请输入有效的 HEX 颜色格式，如 #FF6B6B';
-              }
-              return null;
-            }
-          });
-          if (!colorInput) {
-            return; // 用户取消输入
-          }
-          colorValue = colorInput;
-        } else {
-          // 用户选择了预设颜色
-          colorValue = selected.description || '';
-        }
-
-        configStore.setPrimaryColor(colorValue);
-        previewManager.refresh();
-        sidebarProvider.refresh();
-        vscode.window.showInformationMessage(`主题色已设置为: ${colorValue}`);
       } catch (error) {
         vscode.window.showErrorMessage(`设置自定义颜色失败: ${(error as Error).message}`);
       }
