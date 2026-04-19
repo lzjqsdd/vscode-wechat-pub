@@ -39,19 +39,23 @@
     "commands": [
       {
         "command": "wechatPub.preview",
-        "title": "预览公众号格式"
+        "title": "公众号预览",
+        "icon": "$(eye)"
       },
       {
         "command": "wechatPub.copyHtml",
-        "title": "复制公众号 HTML"
+        "title": "复制公众号 HTML",
+        "icon": "$(copy)"
       },
       {
         "command": "wechatPub.publish",
-        "title": "发布到草稿箱"
+        "title": "发布到草稿箱",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "wechatPub.updateDraft",
-        "title": "更新草稿"
+        "title": "更新草稿",
+        "icon": "$(sync)"
       },
       {
         "command": "wechatPub.setTheme",
@@ -67,7 +71,8 @@
       },
       {
         "command": "wechatPub.uploadImage",
-        "title": "上传图片到公众号"
+        "title": "上传图片到公众号",
+        "icon": "$(image)"
       }
     ],
     "menus": {
