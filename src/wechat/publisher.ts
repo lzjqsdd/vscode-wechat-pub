@@ -97,4 +97,12 @@ export class Publisher {
     }
     return undefined;
   }
+
+  /**
+   * 更新配置（当 VSCode 配置变化时调用）
+   */
+  updateConfig(): void {
+    const config = this.configStore.getWechatConfig();
+    this.api.updateConfig(config);
+  }
 }
