@@ -116,6 +116,14 @@ function updateMarkdownContent(markdown: string): void {
 }
 
 /**
+ * 更新切换开关 UI 状态
+ * @param mode 当前模式
+ */
+function updateSwitchUI(mode: EditorMode): void {
+  // toolbar 已移到 VSCode editor/title，这里不再需要更新
+}
+
+/**
  * 处理模式切换消息
  * @param message 扩展消息
  */

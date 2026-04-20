@@ -139,12 +139,12 @@
         },
         {
           "command": "wechatPub.switchToPreview",
-          "when": "wechatPubCustomEditorActive",
+          "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'preview'",
           "group": "navigation@2"
         },
         {
           "command": "wechatPub.switchToMarkdown",
-          "when": "wechatPubCustomEditorActive",
+          "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'markdown'",
           "group": "navigation@3"
         }
       ],

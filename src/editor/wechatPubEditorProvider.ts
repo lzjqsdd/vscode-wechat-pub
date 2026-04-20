@@ -33,6 +33,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
 
   // 自定义 context key，用于控制按钮显示
   private static readonly contextKey = 'wechatPubCustomEditorActive';
+  private static readonly modeContextKey = 'wechatPubEditorMode';
+
+  // 当前活动模式
+  private static currentMode: EditorMode = 'preview';
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -270,8 +274,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     console.log('[wechatPub] 设置 context key 为 true');
     vscode.commands.executeCommand('setContext', WechatPubEditorProvider.contextKey, true);
 
-    // 获取当前模式
+    // 获取当前模式并设置 mode context key
     const mode = this.stateManager.getMode(document.uri);
+    WechatPubEditorProvider.currentMode = mode;
+    vscode.commands.executeCommand('setContext', WechatPubEditorProvider.modeContextKey, mode);
 
     // 设置初始内容
     webviewPanel.webview.html = getPreviewWebviewContent(
@@ -421,6 +427,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
 
     // 保存新模式
     this.stateManager.setMode(document.uri, newMode);
+
+    // 更新 mode context key（用于控制 editor/title 按钮显示）
+    WechatPubEditorProvider.currentMode = newMode;
+    vscode.commands.executeCommand('setContext', WechatPubEditorProvider.modeContextKey, newMode);
 
     if (newMode === 'preview') {
       // 切换到 Preview 模式，发送渲染后的 HTML 和原始 Markdown（用于 WYSIWYG 编辑）

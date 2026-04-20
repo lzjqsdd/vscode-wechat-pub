@@ -111,12 +111,11 @@ export function getPreviewWebviewContent(
   <style>
     ${css}
 
-    
     /* 内容区域样式 */
     .content-wrapper {
       background: ${previewBg};
       padding: 20px;
-      min-height: calc(100vh - 50px);
+      min-height: 100vh;
     }
 
     .preview-container {
