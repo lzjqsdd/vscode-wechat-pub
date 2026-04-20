@@ -125,15 +125,20 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
    * @param document 文档
    */
   private refreshPanel(webviewPanel: vscode.WebviewPanel, document: vscode.TextDocument): void {
-    const currentMode = this.stateManager.getMode(document.uri);
-    webviewPanel.webview.html = getPreviewWebviewContent(
-      webviewPanel.webview,
-      this.context.extensionUri,
-      document,
-      currentMode,
-      this.configStore,
-      this.themeManager
-    );
+    try {
+      const currentMode = this.stateManager.getMode(document.uri);
+      webviewPanel.webview.html = getPreviewWebviewContent(
+        webviewPanel.webview,
+        this.context.extensionUri,
+        document,
+        currentMode,
+        this.configStore,
+        this.themeManager
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`刷新预览失败: ${errorMessage}`);
+    }
   }
 
   /**

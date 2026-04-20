@@ -119,14 +119,14 @@
     "keybindings": [
       {
         "command": "wechatPub.switchToPreview",
-        "key": "ctrl+p",
-        "mac": "cmd+p",
+        "key": "ctrl+shift+p",
+        "mac": "cmd+shift+p",
         "when": "activeCustomEditor == wechatPub.markdownEditor"
       },
       {
         "command": "wechatPub.switchToMarkdown",
-        "key": "ctrl+m",
-        "mac": "cmd+m",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
         "when": "activeCustomEditor == wechatPub.markdownEditor"
       }
     ],
