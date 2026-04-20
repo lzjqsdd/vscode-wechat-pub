@@ -65,7 +65,7 @@
             "filenamePattern": "*.md"
           }
         ],
-        "priority": "default"
+        "priority": "override"
       }
     ],
     "commands": [
@@ -119,15 +119,15 @@
     "keybindings": [
       {
         "command": "wechatPub.switchToPreview",
-        "key": "ctrl+shift+p",
-        "mac": "cmd+shift+p",
-        "when": "activeCustomEditor == wechatPub.markdownEditor"
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p",
+        "when": "wechatPubCustomEditorActive"
       },
       {
         "command": "wechatPub.switchToMarkdown",
-        "key": "ctrl+shift+m",
-        "mac": "cmd+shift+m",
-        "when": "activeCustomEditor == wechatPub.markdownEditor"
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m",
+        "when": "wechatPubCustomEditorActive"
       }
     ],
     "menus": {
@@ -139,12 +139,12 @@
         },
         {
           "command": "wechatPub.switchToPreview",
-          "when": "activeCustomEditor == wechatPub.markdownEditor",
+          "when": "wechatPubCustomEditorActive",
           "group": "navigation@2"
         },
         {
           "command": "wechatPub.switchToMarkdown",
-          "when": "activeCustomEditor == wechatPub.markdownEditor",
+          "when": "wechatPubCustomEditorActive",
           "group": "navigation@3"
         }
       ],

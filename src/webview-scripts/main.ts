@@ -4,17 +4,9 @@
  * 支持 Preview 模式的 WYSIWYG 编辑
  */
 
+import { vscode } from './vscode';
 import { setupPreviewEditing, cleanupPreviewEditing, updateEditingContent } from './previewEditor';
 import { debounce } from './utils';
-
-// VSCode Webview API
-declare function acquireVsCodeApi(): {
-  postMessage(message: any): void;
-  getState(): any;
-  setState(state: any): void;
-};
-
-const vscode = acquireVsCodeApi();
 
 /**
  * 模式类型定义
@@ -126,54 +118,30 @@ function updateMarkdownContent(markdown: string): void {
 /**
  * 处理模式切换消息
  * @param message 扩展消息
- * @param styles 样式配置（从页面注入）
  */
-function handleSwitchModeMessage(message: ExtensionMessage, styles: {
-  buttonActiveBg: string;
-  buttonBg: string;
-  buttonTextColor: string;
-}): void {
+function handleSwitchModeMessage(message: ExtensionMessage): void {
   const wrapper = document.getElementById('content-wrapper');
-  const toolbar = document.querySelector('.toolbar');
 
-  if (!wrapper || !toolbar) {
+  if (!wrapper) {
+    console.log('[webview] content-wrapper 不存在');
     return;
   }
 
-  const previewBtn = toolbar.querySelector('.preview-btn') as HTMLElement;
-  const markdownBtn = toolbar.querySelector('.markdown-btn') as HTMLElement;
+  console.log('[webview] 处理 switchMode 消息, mode:', message.mode);
 
   if (message.mode === 'preview') {
     // 切换到 Preview 模式
-    // HTML 已在 extension 端通过 DOMPurify 进行 XSS 防护
+    console.log('[webview] 切换到 Preview 模式, html length:', message.html?.length);
     wrapper.innerHTML = `<div class="preview-container" id="preview-container">${message.html || ''}</div>`;
-    if (previewBtn) {
-      previewBtn.style.background = styles.buttonActiveBg;
-      previewBtn.style.color = '#ffffff';
-    }
-    if (markdownBtn) {
-      markdownBtn.style.background = styles.buttonBg;
-      markdownBtn.style.color = styles.buttonTextColor;
-    }
-    // 重新绑定事件
-    initButtonEvents();
     // 启用 Preview 模式的 WYSIWYG 编辑
     setupPreviewEditing(message.markdown);
   } else {
     // 切换到 Markdown 模式
+    console.log('[webview] 切换到 Markdown 模式');
     // 先清理 Preview 编辑状态
     cleanupPreviewEditing();
     wrapper.innerHTML = `<textarea class="markdown-editor" id="markdown-editor">${message.markdown || ''}</textarea>`;
-    if (previewBtn) {
-      previewBtn.style.background = styles.buttonBg;
-      previewBtn.style.color = styles.buttonTextColor;
-    }
-    if (markdownBtn) {
-      markdownBtn.style.background = styles.buttonActiveBg;
-      markdownBtn.style.color = '#ffffff';
-    }
-    // 重新绑定事件（包括 textarea 输入事件）
-    initButtonEvents();
+    // 初始化 textarea 输入事件
     initTextareaEvents();
   }
 }
@@ -184,17 +152,12 @@ function handleSwitchModeMessage(message: ExtensionMessage, styles: {
 function setupMessageListener(): void {
   window.addEventListener('message', (event: MessageEvent) => {
     const message: ExtensionMessage = event.data;
-
-    // 从全局变量获取样式配置
-    const styles = (window as any).__webviewStyles || {
-      buttonActiveBg: '#007acc',
-      buttonBg: '#e0e0e0',
-      buttonTextColor: '#333333'
-    };
+    console.log('[webview] 收到消息:', message.type);
 
     switch (message.type) {
       case 'updatePreview':
         if (message.html) {
+          console.log('[webview] updatePreview, html length:', message.html.length);
           updatePreviewContent(message.html);
           // 重新启用编辑
           setupPreviewEditing(message.markdown);
@@ -210,7 +173,7 @@ function setupMessageListener(): void {
         break;
 
       case 'switchMode':
-        handleSwitchModeMessage(message, styles);
+        handleSwitchModeMessage(message);
         break;
 
       case 'initPreviewEditing':

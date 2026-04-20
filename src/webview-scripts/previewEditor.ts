@@ -4,16 +4,8 @@
  */
 
 import TurndownService from 'turndown';
+import { vscode } from './vscode';
 import { debounce, DebouncedFunction } from './utils';
-
-// VSCode Webview API
-declare function acquireVsCodeApi(): {
-  postMessage(message: any): void;
-  getState(): any;
-  setState(state: any): void;
-};
-
-const vscode = acquireVsCodeApi();
 
 /**
  * 模式类型定义

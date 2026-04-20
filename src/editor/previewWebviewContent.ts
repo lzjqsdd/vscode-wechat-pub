@@ -111,43 +111,7 @@ export function getPreviewWebviewContent(
   <style>
     ${css}
 
-    /* 工具栏样式 */
-    .toolbar {
-      position: sticky;
-      top: 0;
-      display: flex;
-      justify-content: center;
-      padding: 8px 16px;
-      background: ${toolbarBg};
-      border-bottom: 1px solid ${borderColor};
-      z-index: 100;
-    }
-
-    .toolbar-btn {
-      padding: 6px 16px;
-      margin: 0 4px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      transition: background-color 0.2s;
-    }
-
-    .toolbar-btn.preview-btn {
-      background: ${mode === 'preview' ? buttonActiveBg : buttonBg};
-      color: ${mode === 'preview' ? '#ffffff' : buttonTextColor};
-    }
-
-    .toolbar-btn.markdown-btn {
-      background: ${mode === 'markdown' ? buttonActiveBg : buttonBg};
-      color: ${mode === 'markdown' ? '#ffffff' : buttonTextColor};
-    }
-
-    .toolbar-btn:hover {
-      opacity: 0.9;
-    }
-
+    
     /* 内容区域样式 */
     .content-wrapper {
       background: ${previewBg};
@@ -209,12 +173,6 @@ export function getPreviewWebviewContent(
   </style>
 </head>
 <body>
-  <!-- 工具栏 -->
-  <div class="toolbar">
-    <button id="btn-preview" class="toolbar-btn preview-btn">Preview</button>
-    <button id="btn-markdown" class="toolbar-btn markdown-btn">Markdown</button>
-  </div>
-
   <!-- 内容区域 -->
   <div class="content-wrapper" id="content-wrapper">
     ${mode === 'preview' ? `
