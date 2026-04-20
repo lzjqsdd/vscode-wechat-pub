@@ -260,8 +260,21 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     this.stateManager.setMode(document.uri, newMode);
 
     if (newMode === 'preview') {
-      // 切换到 Preview 模式，发送渲染后的 HTML
-      this.updatePreview(webviewPanel, document);
+      // 切换到 Preview 模式，发送渲染后的 HTML 和原始 Markdown（用于 WYSIWYG 编辑）
+      const content = document.getText();
+      const { html } = renderMarkdown(content, {
+        countStatus: this.configStore.getCountStatus(),
+        isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
+      });
+
+      this.postMessage(webviewPanel, {
+        type: 'switchMode',
+        mode: 'preview',
+        html: html,
+        markdown: this.escapeMarkdownForWebview(content),
+      });
     } else {
       // 切换到 Markdown 模式，发送原始 Markdown
       this.postMessage(webviewPanel, {
@@ -291,6 +304,7 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     this.postMessage(webviewPanel, {
       type: 'updatePreview',
       html: html,
+      markdown: this.escapeMarkdownForWebview(content),
     });
   }
 

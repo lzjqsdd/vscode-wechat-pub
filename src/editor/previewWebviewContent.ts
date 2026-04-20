@@ -182,6 +182,30 @@ export function getPreviewWebviewContent(
     .markdown-editor:focus {
       outline: none;
     }
+
+    /* Preview WYSIWYG 编辑样式 */
+    [data-editable] {
+      outline: none;
+      transition: outline 0.2s, background-color 0.2s;
+    }
+
+    [data-editable]:focus {
+      outline: 2px solid var(--md-primary-color, #35b378);
+      outline-offset: 2px;
+    }
+
+    [data-editable]:hover {
+      background: rgba(53, 179, 120, 0.1);
+    }
+
+    /* 禁止编辑的元素样式 */
+    [contenteditable="false"] {
+      cursor: default;
+    }
+
+    pre, code, table, figure {
+      cursor: default;
+    }
   </style>
 </head>
 <body>
@@ -209,6 +233,8 @@ export function getPreviewWebviewContent(
       buttonBg: '${buttonBg}',
       buttonTextColor: '${buttonTextColor}'
     };
+    // 传递原始 Markdown 内容，用于 WYSIWYG 编辑时保留 front-matter
+    window.__originalMarkdown = ${mode === 'preview' ? `'${escapeHtmlForTextarea(content).replace(/'/g, "\\'")}'` : 'null'};
   </script>
 
   <!-- Webview 脚本 -->

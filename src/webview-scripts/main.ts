@@ -1,7 +1,10 @@
 /**
  * Webview JavaScript 入口文件
  * 处理 Preview/Markdown 模式切换和消息通信
+ * 支持 Preview 模式的 WYSIWYG 编辑
  */
+
+import { setupPreviewEditing, cleanupPreviewEditing, updateEditingContent } from './previewEditor';
 
 // VSCode Webview API
 declare function acquireVsCodeApi(): {
@@ -27,7 +30,7 @@ interface WebviewMessage {
 }
 
 interface ExtensionMessage {
-  type: 'updatePreview' | 'updateMarkdown' | 'switchMode';
+  type: 'updatePreview' | 'updateMarkdown' | 'switchMode' | 'initPreviewEditing';
   html?: string;
   markdown?: string;
   mode?: EditorMode;
@@ -172,8 +175,12 @@ function handleSwitchModeMessage(message: ExtensionMessage, styles: {
     }
     // 重新绑定事件
     initButtonEvents();
+    // 启用 Preview 模式的 WYSIWYG 编辑
+    setupPreviewEditing(message.markdown);
   } else {
     // 切换到 Markdown 模式
+    // 先清理 Preview 编辑状态
+    cleanupPreviewEditing();
     wrapper.innerHTML = `<textarea class="markdown-editor" id="markdown-editor">${message.markdown || ''}</textarea>`;
     if (previewBtn) {
       previewBtn.style.background = styles.buttonBg;
@@ -207,20 +214,50 @@ function setupMessageListener(): void {
       case 'updatePreview':
         if (message.html) {
           updatePreviewContent(message.html);
+          // 重新启用编辑
+          setupPreviewEditing(message.markdown);
         }
         break;
 
       case 'updateMarkdown':
         if (message.markdown) {
           updateMarkdownContent(message.markdown);
+          // 更新编辑内容
+          updateEditingContent(message.markdown);
         }
         break;
 
       case 'switchMode':
         handleSwitchModeMessage(message, styles);
         break;
+
+      case 'initPreviewEditing':
+        // 初始化 Preview 模式编辑
+        if (message.markdown) {
+          setupPreviewEditing(message.markdown);
+        }
+        break;
     }
   });
+}
+
+/**
+ * 检查当前模式并初始化编辑
+ */
+function initEditMode(): void {
+  // 检查当前模式（通过 DOM 判断）
+  const previewContainer = document.getElementById('preview-container');
+  const markdownEditor = document.getElementById('markdown-editor');
+
+  if (previewContainer) {
+    // 当前为 Preview 模式，启用 WYSIWYG 编辑
+    // 从全局变量获取原始 Markdown（如果有）
+    const originalMarkdown = (window as any).__originalMarkdown;
+    setupPreviewEditing(originalMarkdown);
+  } else if (markdownEditor) {
+    // 当前为 Markdown 模式，初始化 textarea 事件
+    initTextareaEvents();
+  }
 }
 
 /**
@@ -230,6 +267,8 @@ function main(): void {
   initButtonEvents();
   initTextareaEvents();
   setupMessageListener();
+  // 初始化编辑模式
+  initEditMode();
 }
 
 // 页面加载完成后初始化

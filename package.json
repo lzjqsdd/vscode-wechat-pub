@@ -60,7 +60,11 @@
       {
         "viewType": "wechatPub.markdownEditor",
         "displayName": "微信公众号编辑器",
-        "selector": [{ "filenamePattern": "*.md" }],
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
         "priority": "default"
       }
     ],
@@ -187,9 +191,11 @@
     "highlight.js": "^11.9.0",
     "isomorphic-dompurify": "^2.36.0",
     "juice": "^10.0.0",
-    "marked": "^12.0.0"
+    "marked": "^12.0.0",
+    "turndown": "^7.2.4"
   },
   "devDependencies": {
+    "@types/turndown": "^5.0.6",
     "@types/vscode": "^1.91.0",
     "@vscode/vsce": "^2.22.0",
     "copy-webpack-plugin": "^14.0.0",

@@ -18,7 +18,7 @@ export interface WebviewMessage {
  * Extension 发送给 webview 的消息
  */
 export interface ExtensionMessage {
-  type: 'updatePreview' | 'updateMarkdown' | 'switchMode';
+  type: 'updatePreview' | 'updateMarkdown' | 'switchMode' | 'initPreviewEditing';
   html?: string;
   markdown?: string;
   mode?: EditorMode;
