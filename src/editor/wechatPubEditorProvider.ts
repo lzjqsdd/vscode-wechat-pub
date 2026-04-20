@@ -10,25 +10,7 @@ import { getPreviewWebviewContent } from './previewWebviewContent';
 import { ConfigStore } from '../storage/configStore';
 import { ThemeManager } from '../preview/themeManager';
 import { renderMarkdown } from '../core/renderer';
-
-/**
- * 创建防抖函数
- * @param fn 要防抖的函数
- * @param delay 延迟时间（毫秒）
- * @returns 防抖后的函数
- */
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  return ((...args: Parameters<T>) => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = undefined;
-    }, delay);
-  }) as T;
-}
+import { applyDocumentEdit, debounce } from './documentSync';
 
 /**
  * 微信公众号编辑器 Provider
@@ -42,6 +24,9 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   private static readonly activePanels = new Map<string, vscode.WebviewPanel>();
   private static readonly activeDocuments = new Map<string, vscode.TextDocument>();
   private static readonly activeProviders = new Map<string, WechatPubEditorProvider>();
+
+  // 存储正在从 webview 编辑的文档，用于防止 echo 循环
+  private static readonly webviewEditingDocuments = new Set<string>();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -178,9 +163,11 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     webviewPanel.onDidDispose(() => {
       isDisposed = true;
       // 清理存储的活动 panels
+      const key = document.uri.toString();
       WechatPubEditorProvider.activePanels.delete(key);
       WechatPubEditorProvider.activeDocuments.delete(key);
       WechatPubEditorProvider.activeProviders.delete(key);
+      WechatPubEditorProvider.webviewEditingDocuments.delete(key);
       // 清理该 panel 的所有订阅
       panelSubscriptions.forEach(d => d.dispose());
     }, undefined, this.context.subscriptions);
@@ -193,7 +180,13 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     }, 200);
 
     // 监听文档变化，实时更新预览（使用防抖）
+    // 注意：跳过来自 webview 的编辑，防止 echo 循环
     const changeDisposable = vscode.workspace.onDidChangeTextDocument(e => {
+      const key = document.uri.toString();
+      // 跳过来自 webview 的编辑
+      if (WechatPubEditorProvider.webviewEditingDocuments.has(key)) {
+        return;
+      }
       if (e.document.uri.toString() === document.uri.toString()) {
         debouncedUpdatePreview(document);
       }
@@ -234,7 +227,17 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
         break;
 
       case 'editContent':
-        // Markdown 模式下的编辑通知（可用于实时同步）
+        // Markdown 模式下的编辑通知，实时同步到文档
+        if (message.content !== undefined) {
+          // 标记为 webview 编辑，防止 echo 循环
+          const key = document.uri.toString();
+          WechatPubEditorProvider.webviewEditingDocuments.add(key);
+          applyDocumentEdit(document, message.content);
+          // 编辑完成后移除标记（延迟移除以确保 onDidChangeTextDocument 处理完毕）
+          setTimeout(() => {
+            WechatPubEditorProvider.webviewEditingDocuments.delete(key);
+          }, 50);
+        }
         break;
 
       case 'updateContent':

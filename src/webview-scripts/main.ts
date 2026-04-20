@@ -21,7 +21,7 @@ type EditorMode = 'preview' | 'markdown';
  * Webview 消息类型
  */
 interface WebviewMessage {
-  type: 'switchMode' | 'updateContent';
+  type: 'switchMode' | 'editContent' | 'updateContent';
   mode?: EditorMode;
   content?: string;
 }
@@ -31,6 +31,25 @@ interface ExtensionMessage {
   html?: string;
   markdown?: string;
   mode?: EditorMode;
+}
+
+/**
+ * 创建防抖函数
+ * @param fn 要防抖的函数
+ * @param delay 延迟时间（毫秒）
+ * @returns 防抖后的函数
+ */
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  return ((...args: Parameters<T>) => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      fn(...args);
+      timeoutId = undefined;
+    }, delay);
+  }) as T;
 }
 
 /**
@@ -73,6 +92,25 @@ function initButtonEvents(): void {
     markdownBtn.addEventListener('click', () => {
       switchMode('markdown');
     });
+  }
+}
+
+/**
+ * 初始化 Markdown 编辑器输入事件
+ * 使用 300ms 防抖同步编辑内容到 VSCode 文档
+ */
+function initTextareaEvents(): void {
+  const editor = document.getElementById('markdown-editor') as HTMLTextAreaElement;
+  if (editor) {
+    // 创建防抖的编辑同步函数（300ms 延迟）
+    const debouncedSync = debounce(() => {
+      vscode.postMessage({
+        type: 'editContent',
+        content: editor.value
+      });
+    }, 300);
+
+    editor.addEventListener('input', debouncedSync);
   }
 }
 
@@ -145,8 +183,9 @@ function handleSwitchModeMessage(message: ExtensionMessage, styles: {
       markdownBtn.style.background = styles.buttonActiveBg;
       markdownBtn.style.color = '#ffffff';
     }
-    // 重新绑定事件
+    // 重新绑定事件（包括 textarea 输入事件）
     initButtonEvents();
+    initTextareaEvents();
   }
 }
 
@@ -189,6 +228,7 @@ function setupMessageListener(): void {
  */
 function main(): void {
   initButtonEvents();
+  initTextareaEvents();
   setupMessageListener();
 }
 
