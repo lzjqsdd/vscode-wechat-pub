@@ -30,18 +30,6 @@ function getVSCodeThemeKind(): string {
 }
 
 /**
- * 转义 HTML 特殊字符（用于显示错误信息等）
- */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/**
  * 生成 Preview 模式的 HTML
  * @param webview Webview 实例
  * @param extensionUri 扩展 URI
@@ -81,7 +69,7 @@ export function getPreviewWebviewContent(
     const errorMessage = error instanceof Error ? error.message : String(error);
     html = `<div style="color: red; padding: 20px;">
       <h3>渲染错误</h3>
-      <p>${escapeHtml(errorMessage)}</p>
+      <p>${escapeHtmlForTextarea(errorMessage)}</p>
     </div>`;
   }
 

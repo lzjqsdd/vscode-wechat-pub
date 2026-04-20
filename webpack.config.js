@@ -64,9 +64,6 @@ const webviewConfig = {
     libraryTarget: 'umd'
   },
   devtool: 'nosources-source-map',
-  externals: {
-    vscode: 'commonjs vscode'
-  },
   resolve: {
     extensions: ['.ts', '.js']
   },

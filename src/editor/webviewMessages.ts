@@ -11,7 +11,6 @@ import { EditorMode } from './editorStateManager';
 export interface WebviewMessage {
   type: 'switchMode' | 'editContent' | 'updateContent';
   mode?: EditorMode;
-  newMarkdown?: string;
   content?: string;
 }
 

@@ -111,8 +111,12 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     if (activePanelCount === 1) {
       // 只有一个活动的 panel，直接切换它
       const [key] = WechatPubEditorProvider.activePanels.keys();
-      const uri = vscode.Uri.parse(key);
-      WechatPubEditorProvider.switchMode(uri, mode);
+      try {
+        const uri = vscode.Uri.parse(key, true);
+        WechatPubEditorProvider.switchMode(uri, mode);
+      } catch {
+        // URI 解析失败时忽略
+      }
     }
   }
 
@@ -167,12 +171,18 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
 
     // 跟踪 panel 是否已销毁
     let isDisposed = false;
+
+    // 存储该 panel 的订阅，用于清理
+    const panelSubscriptions: vscode.Disposable[] = [];
+
     webviewPanel.onDidDispose(() => {
       isDisposed = true;
       // 清理存储的活动 panels
       WechatPubEditorProvider.activePanels.delete(key);
       WechatPubEditorProvider.activeDocuments.delete(key);
       WechatPubEditorProvider.activeProviders.delete(key);
+      // 清理该 panel 的所有订阅
+      panelSubscriptions.forEach(d => d.dispose());
     }, undefined, this.context.subscriptions);
 
     // 创建防抖的预览更新函数（200ms 延迟）
@@ -188,7 +198,7 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
         debouncedUpdatePreview(document);
       }
     });
-    this.context.subscriptions.push(changeDisposable);
+    panelSubscriptions.push(changeDisposable);
 
     // 监听 VSCode 颜色主题变化
     const colorThemeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
@@ -205,7 +215,7 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
         this.themeManager
       );
     });
-    this.context.subscriptions.push(colorThemeDisposable);
+    panelSubscriptions.push(colorThemeDisposable);
   }
 
   /**
