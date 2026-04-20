@@ -29,6 +29,18 @@ function getVSCodeThemeKind(): string {
 }
 
 /**
+ * 转义 HTML 特殊字符（用于显示错误信息等）
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * 生成 Preview 模式的 HTML
  * @param webview Webview 实例
  * @param extensionUri 扩展 URI
@@ -50,12 +62,22 @@ export function getPreviewWebviewContent(
   const content = document.getText();
 
   // 渲染 Markdown（DOMPurify 已在 renderer 中进行 XSS 防护）
-  const { html } = renderMarkdown(content, {
-    countStatus: configStore.getCountStatus(),
-    isMacCodeBlock: configStore.getMacCodeBlock(),
-    citeStatus: configStore.getCiteStatus(),
-    legend: configStore.getLegend(),
-  });
+  let html: string;
+  try {
+    const result = renderMarkdown(content, {
+      countStatus: configStore.getCountStatus(),
+      isMacCodeBlock: configStore.getMacCodeBlock(),
+      citeStatus: configStore.getCiteStatus(),
+      legend: configStore.getLegend(),
+    });
+    html = result.html;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    html = `<div style="color: red; padding: 20px;">
+      <h3>渲染错误</h3>
+      <p>${escapeHtml(errorMessage)}</p>
+    </div>`;
+  }
 
   // 获取主题和颜色配置
   const theme = configStore.getTheme() as ThemeName;
@@ -249,10 +271,13 @@ export function getPreviewWebviewContent(
 
 /**
  * 转义 HTML 用于 textarea 内容
+ * 包含引号转义以防止 XSS 攻击
  */
 function escapeHtmlForTextarea(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

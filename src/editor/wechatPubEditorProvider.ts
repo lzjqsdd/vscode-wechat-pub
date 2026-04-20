@@ -12,6 +12,25 @@ import { ThemeManager } from '../preview/themeManager';
 import { renderMarkdown } from '../core/renderer';
 
 /**
+ * 创建防抖函数
+ * @param fn 要防抖的函数
+ * @param delay 延迟时间（毫秒）
+ * @returns 防抖后的函数
+ */
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  return ((...args: Parameters<T>) => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      fn(...args);
+      timeoutId = undefined;
+    }, delay);
+  }) as T;
+}
+
+/**
  * 微信公众号编辑器 Provider
  */
 export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider {
@@ -50,8 +69,13 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   async resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
-    _token: vscode.CancellationToken
+    token: vscode.CancellationToken
   ): Promise<void> {
+    // 检查是否已取消
+    if (token.isCancellationRequested) {
+      return;
+    }
+
     // 配置 webview
     webviewPanel.webview.options = {
       enableScripts: true,
@@ -73,22 +97,41 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     // 监听 webview 消息
     webviewPanel.webview.onDidReceiveMessage(
       async (message: WebviewMessage) => {
+        if (token.isCancellationRequested) {
+          return;
+        }
         await this.handleWebviewMessage(message, document, webviewPanel);
       },
       undefined,
       this.context.subscriptions
     );
 
-    // 监听文档变化，实时更新预览
+    // 跟踪 panel 是否已销毁
+    let isDisposed = false;
+    webviewPanel.onDidDispose(() => {
+      isDisposed = true;
+    }, undefined, this.context.subscriptions);
+
+    // 创建防抖的预览更新函数（200ms 延迟）
+    const debouncedUpdatePreview = debounce((doc: vscode.TextDocument) => {
+      if (!token.isCancellationRequested && !isDisposed) {
+        this.updatePreview(webviewPanel, doc);
+      }
+    }, 200);
+
+    // 监听文档变化，实时更新预览（使用防抖）
     const changeDisposable = vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document.uri.toString() === document.uri.toString()) {
-        this.updatePreview(webviewPanel, document);
+        debouncedUpdatePreview(document);
       }
     });
     this.context.subscriptions.push(changeDisposable);
 
     // 监听 VSCode 颜色主题变化
     const colorThemeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
+      if (token.isCancellationRequested || isDisposed) {
+        return;
+      }
       const currentMode = this.stateManager.getMode(document.uri);
       webviewPanel.webview.html = getPreviewWebviewContent(
         webviewPanel.webview,

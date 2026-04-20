@@ -14,6 +14,14 @@ import { showColorPickerPanel } from './preview/colorPickerPanel';
 import { WechatPubEditorProvider } from './editor/wechatPubEditorProvider';
 
 /**
+ * 安全提取错误信息
+ * 避免 unsafe type assertion
+ */
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * 插件激活入口
  */
 export function activate(context: vscode.ExtensionContext) {
@@ -43,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage('请打开 Markdown 文件');
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`预览失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`预览失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -57,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage('请打开 Markdown 文件');
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`复制 HTML 失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`复制 HTML 失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -72,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage('请打开 Markdown 文件');
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`发布失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`发布失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -87,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage('请打开 Markdown 文件');
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`更新草稿失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`更新草稿失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -99,7 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.refresh();
         vscode.window.showInformationMessage(`主题已切换为: ${theme}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`切换主题失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`切换主题失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -111,7 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.refresh();
         vscode.window.showInformationMessage(`主题色已设置为: ${color}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置主题色失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置主题色失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -126,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showInformationMessage(`主题色已设置为: ${color}`);
         });
       } catch (error) {
-        vscode.window.showErrorMessage(`设置自定义颜色失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置自定义颜色失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -173,7 +181,7 @@ export function activate(context: vscode.ExtensionContext) {
         previewManager.refresh();
         sidebarProvider.refresh();
       } catch (error) {
-        vscode.window.showErrorMessage(`切换选项失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`切换选项失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -187,7 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
         const themeName = themeUrl.split('/').pop()?.replace('.min.css', '') || themeUrl;
         vscode.window.showInformationMessage(`代码块主题已设置为: ${themeName}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置代码块主题失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置代码块主题失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -199,7 +207,7 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.refresh();
         vscode.window.showInformationMessage(`图注格式已设置为: ${legend}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置图注格式失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置图注格式失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -211,7 +219,7 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.refresh();
         vscode.window.showInformationMessage(`字体已设置`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置字体失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置字体失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -223,7 +231,7 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.refresh();
         vscode.window.showInformationMessage(`字号已设置为: ${fontSize}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置字号失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置字号失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -236,7 +244,7 @@ export function activate(context: vscode.ExtensionContext) {
         const modeText = mode === 'mobile' ? '移动端（375px）' : '电脑端（自适应）';
         vscode.window.showInformationMessage(`预览模式已设置为: ${modeText}`);
       } catch (error) {
-        vscode.window.showErrorMessage(`设置预览模式失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`设置预览模式失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -246,7 +254,7 @@ export function activate(context: vscode.ExtensionContext) {
         const doc = await vscode.workspace.openTextDocument(filePath);
         vscode.window.showTextDocument(doc);
       } catch (error) {
-        vscode.window.showErrorMessage(`打开草稿失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`打开草稿失败: ${getErrorMessage(error)}`);
       }
     }),
 
@@ -255,7 +263,7 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         await imageUploadService.handleUploadCommand(uri);
       } catch (error) {
-        vscode.window.showErrorMessage(`上传图片失败: ${(error as Error).message}`);
+        vscode.window.showErrorMessage(`上传图片失败: ${getErrorMessage(error)}`);
       }
     }),
 
