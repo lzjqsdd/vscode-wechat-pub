@@ -232,11 +232,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
           // 标记为 webview 编辑，防止 echo 循环
           const key = document.uri.toString();
           WechatPubEditorProvider.webviewEditingDocuments.add(key);
-          applyDocumentEdit(document, message.content);
-          // 编辑完成后移除标记（延迟移除以确保 onDidChangeTextDocument 处理完毕）
-          setTimeout(() => {
+          // 等待编辑完成后移除标记
+          applyDocumentEdit(document, message.content).then(() => {
             WechatPubEditorProvider.webviewEditingDocuments.delete(key);
-          }, 50);
+          });
         }
         break;
 
@@ -303,11 +302,12 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     newContent: string
   ): Promise<void> {
     const edit = new vscode.WorkspaceEdit();
-    edit.replace(
-      document.uri,
-      new vscode.Range(0, 0, document.lineCount, 0),
-      newContent
+    // 使用 positionAt 计算范围，与 documentSync.ts 保持一致
+    const fullRange = new vscode.Range(
+      document.positionAt(0),
+      document.positionAt(document.getText().length)
     );
+    edit.replace(document.uri, fullRange, newContent);
     await vscode.workspace.applyEdit(edit);
   }
 
