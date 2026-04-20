@@ -129,6 +129,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setTheme(theme);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         vscode.window.showInformationMessage(`主题已切换为: ${theme}`);
       } catch (error) {
         vscode.window.showErrorMessage(`切换主题失败: ${getErrorMessage(error)}`);
@@ -141,6 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setPrimaryColor(color);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         vscode.window.showInformationMessage(`主题色已设置为: ${color}`);
       } catch (error) {
         vscode.window.showErrorMessage(`设置主题色失败: ${getErrorMessage(error)}`);
@@ -155,6 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
           configStore.setPrimaryColor(color);
           previewManager.refresh();
           sidebarProvider.refresh();
+          WechatPubEditorProvider.refreshAll();
           vscode.window.showInformationMessage(`主题色已设置为: ${color}`);
         });
       } catch (error) {
@@ -204,6 +207,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(message);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
       } catch (error) {
         vscode.window.showErrorMessage(`切换选项失败: ${getErrorMessage(error)}`);
       }
@@ -215,6 +219,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setCodeBlockTheme(themeUrl);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         // 从 URL 提取主题名称显示
         const themeName = themeUrl.split('/').pop()?.replace('.min.css', '') || themeUrl;
         vscode.window.showInformationMessage(`代码块主题已设置为: ${themeName}`);
@@ -229,6 +234,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setLegend(legend);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         vscode.window.showInformationMessage(`图注格式已设置为: ${legend}`);
       } catch (error) {
         vscode.window.showErrorMessage(`设置图注格式失败: ${getErrorMessage(error)}`);
@@ -241,6 +247,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setFontFamily(fontFamily);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         vscode.window.showInformationMessage(`字体已设置`);
       } catch (error) {
         vscode.window.showErrorMessage(`设置字体失败: ${getErrorMessage(error)}`);
@@ -253,6 +260,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setFontSize(fontSize);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         vscode.window.showInformationMessage(`字号已设置为: ${fontSize}`);
       } catch (error) {
         vscode.window.showErrorMessage(`设置字号失败: ${getErrorMessage(error)}`);
@@ -265,6 +273,7 @@ export function activate(context: vscode.ExtensionContext) {
         configStore.setPreviewWidth(mode);
         previewManager.refresh();
         sidebarProvider.refresh();
+        WechatPubEditorProvider.refreshAll();
         const modeText = mode === 'mobile' ? '移动端（375px）' : '电脑端（自适应）';
         vscode.window.showInformationMessage(`预览模式已设置为: ${modeText}`);
       } catch (error) {

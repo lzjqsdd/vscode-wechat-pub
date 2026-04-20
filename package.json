@@ -116,6 +116,20 @@
         "icon": "$(code)"
       }
     ],
+    "keybindings": [
+      {
+        "command": "wechatPub.switchToPreview",
+        "key": "ctrl+p",
+        "mac": "cmd+p",
+        "when": "activeCustomEditor == wechatPub.markdownEditor"
+      },
+      {
+        "command": "wechatPub.switchToMarkdown",
+        "key": "ctrl+m",
+        "mac": "cmd+m",
+        "when": "activeCustomEditor == wechatPub.markdownEditor"
+      }
+    ],
     "menus": {
       "editor/title": [
         {

@@ -106,6 +106,37 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * 刷新所有活动的 Custom Editor panels
+   * 当主题、颜色、字体等设置变化时调用
+   */
+  public static refreshAll(): void {
+    for (const [key, provider] of WechatPubEditorProvider.activeProviders) {
+      const panel = WechatPubEditorProvider.activePanels.get(key);
+      const document = WechatPubEditorProvider.activeDocuments.get(key);
+      if (panel && document) {
+        provider.refreshPanel(panel, document);
+      }
+    }
+  }
+
+  /**
+   * 刷新单个 panel 的内容
+   * @param webviewPanel Webview 面板
+   * @param document 文档
+   */
+  private refreshPanel(webviewPanel: vscode.WebviewPanel, document: vscode.TextDocument): void {
+    const currentMode = this.stateManager.getMode(document.uri);
+    webviewPanel.webview.html = getPreviewWebviewContent(
+      webviewPanel.webview,
+      this.context.extensionUri,
+      document,
+      currentMode,
+      this.configStore,
+      this.themeManager
+    );
+  }
+
+  /**
    * 解析自定义编辑器
    */
   async resolveCustomTextEditor(
