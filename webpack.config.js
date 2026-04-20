@@ -51,9 +51,46 @@ const config = {
   ]
 };
 
+// Webview 脚本配置（编译到 dist/webview/）
+/**@type {import('webpack').Configuration}*/
+const webviewConfig = {
+  target: 'web',
+  mode: 'none',
+
+  entry: './src/webview-scripts/main.ts',
+  output: {
+    path: path.resolve(__dirname, 'dist', 'webview'),
+    filename: 'main.js',
+    libraryTarget: 'umd'
+  },
+  devtool: 'nosources-source-map',
+  externals: {
+    vscode: 'commonjs vscode'
+  },
+  resolve: {
+    extensions: ['.ts', '.js']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'ts-loader'
+          }
+        ]
+      }
+    ]
+  }
+};
+
 // Production 配置：保留导出函数名
 module.exports = (env, argv) => {
-  if (argv.mode === 'production') {
+  const isProduction = argv.mode === 'production';
+
+  // Extension 配置
+  if (isProduction) {
     config.optimization = {
       minimize: true,
       minimizer: [
@@ -67,5 +104,22 @@ module.exports = (env, argv) => {
       ]
     };
   }
-  return config;
+
+  // Webview 配置
+  if (isProduction) {
+    webviewConfig.optimization = {
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            keep_classnames: true,
+            keep_fnames: true,
+          },
+          extractComments: false
+        })
+      ]
+    };
+  }
+
+  return [config, webviewConfig];
 };

@@ -38,6 +38,11 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
 
   private readonly themeManager: ThemeManager;
 
+  // 存储活动的 webview panels，用于从命令切换模式
+  private static readonly activePanels = new Map<string, vscode.WebviewPanel>();
+  private static readonly activeDocuments = new Map<string, vscode.TextDocument>();
+  private static readonly activeProviders = new Map<string, WechatPubEditorProvider>();
+
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly stateManager: EditorStateManager,
@@ -64,6 +69,54 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * 从命令切换编辑模式
+   * @param documentUri 文档 URI
+   * @param mode 目标模式
+   */
+  public static switchMode(documentUri: vscode.Uri, mode: EditorMode): void {
+    const key = documentUri.toString();
+    const panel = WechatPubEditorProvider.activePanels.get(key);
+    const document = WechatPubEditorProvider.activeDocuments.get(key);
+    const provider = WechatPubEditorProvider.activeProviders.get(key);
+
+    if (panel && document && provider) {
+      provider.handleSwitchMode(mode, document, panel);
+    }
+  }
+
+  /**
+   * 从命令切换当前活动编辑器的模式
+   * 当 activeTextEditor 为 undefined 时使用
+   * @param mode 目标模式
+   */
+  public static switchActiveMode(mode: EditorMode): void {
+    // 查找当前活动的 panel
+    // VSCode 的 activeCustomEditor 条件确保只有在我们的编辑器激活时才触发
+    // 所以我们可以遍历所有活动的 panels 来找到应该切换的那个
+
+    // 尝试通过 visibleTextEditors 或 textDocuments 找到当前活动的文档
+    const visibleEditors = vscode.window.visibleTextEditors;
+
+    // 首先尝试匹配 visibleTextEditors
+    for (const editor of visibleEditors) {
+      const key = editor.document.uri.toString();
+      if (WechatPubEditorProvider.activePanels.has(key)) {
+        WechatPubEditorProvider.switchMode(editor.document.uri, mode);
+        return;
+      }
+    }
+
+    // 如果没有找到，检查是否有唯一的活动 panel
+    const activePanelCount = WechatPubEditorProvider.activePanels.size;
+    if (activePanelCount === 1) {
+      // 只有一个活动的 panel，直接切换它
+      const [key] = WechatPubEditorProvider.activePanels.keys();
+      const uri = vscode.Uri.parse(key);
+      WechatPubEditorProvider.switchMode(uri, mode);
+    }
+  }
+
+  /**
    * 解析自定义编辑器
    */
   async resolveCustomTextEditor(
@@ -80,6 +133,12 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     webviewPanel.webview.options = {
       enableScripts: true,
     };
+
+    // 存储活动的 panel 和 document
+    const key = document.uri.toString();
+    WechatPubEditorProvider.activePanels.set(key, webviewPanel);
+    WechatPubEditorProvider.activeDocuments.set(key, document);
+    WechatPubEditorProvider.activeProviders.set(key, this);
 
     // 获取当前模式
     const mode = this.stateManager.getMode(document.uri);
@@ -110,6 +169,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     let isDisposed = false;
     webviewPanel.onDidDispose(() => {
       isDisposed = true;
+      // 清理存储的活动 panels
+      WechatPubEditorProvider.activePanels.delete(key);
+      WechatPubEditorProvider.activeDocuments.delete(key);
+      WechatPubEditorProvider.activeProviders.delete(key);
     }, undefined, this.context.subscriptions);
 
     // 创建防抖的预览更新函数（200ms 延迟）

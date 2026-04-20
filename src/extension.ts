@@ -39,6 +39,30 @@ export function activate(context: vscode.ExtensionContext) {
   // 注册 Custom Editor Provider
   context.subscriptions.push(WechatPubEditorProvider.register(context));
 
+  // 模式切换命令（通过 editor/title 菜单按钮）
+  context.subscriptions.push(
+    vscode.commands.registerCommand('wechatPub.switchToPreview', () => {
+      // 获取当前活动的 custom editor 的文档 URI
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        // 如果有传统 text editor，使用其 document
+        WechatPubEditorProvider.switchMode(activeEditor.document.uri, 'preview');
+      } else {
+        // 否则从 provider 的活动文档列表中查找
+        WechatPubEditorProvider.switchActiveMode('preview');
+      }
+    }),
+
+    vscode.commands.registerCommand('wechatPub.switchToMarkdown', () => {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        WechatPubEditorProvider.switchMode(activeEditor.document.uri, 'markdown');
+      } else {
+        WechatPubEditorProvider.switchActiveMode('markdown');
+      }
+    })
+  );
+
   // 注册命令
   context.subscriptions.push(
     // 预览命令

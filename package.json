@@ -100,6 +100,16 @@
         "command": "wechatPub.uploadImage",
         "title": "$(image) 上传图片到公众号",
         "icon": "$(image)"
+      },
+      {
+        "command": "wechatPub.switchToPreview",
+        "title": "$(eye) Preview",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "wechatPub.switchToMarkdown",
+        "title": "$(code) Markdown",
+        "icon": "$(code)"
       }
     ],
     "menus": {
@@ -108,6 +118,16 @@
           "command": "wechatPub.preview",
           "when": "editorLangId == markdown",
           "group": "navigation@1"
+        },
+        {
+          "command": "wechatPub.switchToPreview",
+          "when": "activeCustomEditor == wechatPub.markdownEditor",
+          "group": "navigation@2"
+        },
+        {
+          "command": "wechatPub.switchToMarkdown",
+          "when": "activeCustomEditor == wechatPub.markdownEditor",
+          "group": "navigation@3"
         }
       ],
       "editor/context": [
