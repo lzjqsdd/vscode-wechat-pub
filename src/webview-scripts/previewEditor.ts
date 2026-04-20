@@ -4,6 +4,7 @@
  */
 
 import TurndownService from 'turndown';
+import { debounce, DebouncedFunction } from './utils';
 
 // VSCode Webview API
 declare function acquireVsCodeApi(): {
@@ -20,23 +21,10 @@ const vscode = acquireVsCodeApi();
 type EditorMode = 'preview' | 'markdown';
 
 /**
- * 创建防抖函数
- * @param fn 要防抖的函数
- * @param delay 延迟时间（毫秒）
- * @returns 防抖后的函数
+ * WeakMap for storing debounced input handlers
+ * Allows cleanup of event listeners without memory leaks
  */
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  return ((...args: Parameters<T>) => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = undefined;
-    }, delay);
-  }) as T;
-}
+const debouncedInputHandlers = new WeakMap<HTMLElement, DebouncedFunction<() => void>>();
 
 /**
  * 初始化 Turndown 服务
@@ -110,8 +98,8 @@ let frontMatterContent = '';
  * @param markdown 原始 Markdown 内容
  */
 export function setOriginalMarkdown(markdown: string): void {
-  // 提取 front-matter
-  const frontMatterMatch = markdown.match(/^---\n[\s\S]*?\n---\n/);
+  // 提取 front-matter (支持 CRLF 和 LF 换行符)
+  const frontMatterMatch = markdown.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n/);
   if (frontMatterMatch) {
     frontMatterContent = frontMatterMatch[0];
   } else {
@@ -188,7 +176,10 @@ function enableElementEditing(element: HTMLElement): void {
   element.addEventListener('blur', handleElementBlur);
 
   // 监听 input 事件（实时反馈，但使用防抖）
-  element.addEventListener('input', debounce(handleElementBlur, 500));
+  // 使用 WeakMap 存储以便后续清理
+  const debouncedHandler = debounce(handleElementBlur, 500);
+  debouncedInputHandlers.set(element, debouncedHandler);
+  element.addEventListener('input', debouncedHandler);
 }
 
 /**
@@ -271,8 +262,16 @@ export function cleanupPreviewEditing(): void {
     htmlEl.removeAttribute('contenteditable');
     htmlEl.removeAttribute('data-editable');
 
-    // 移除事件监听器（blur 和 input）
+    // 移除 blur 事件监听器
     htmlEl.removeEventListener('blur', handleElementBlur);
+
+    // 移除 input 事件监听器并取消待处理的 timeout
+    const debouncedHandler = debouncedInputHandlers.get(htmlEl);
+    if (debouncedHandler) {
+      htmlEl.removeEventListener('input', debouncedHandler);
+      debouncedHandler.cancel(); // 取消待处理的 debounce timeout
+      debouncedInputHandlers.delete(htmlEl);
+    }
   });
 }
 

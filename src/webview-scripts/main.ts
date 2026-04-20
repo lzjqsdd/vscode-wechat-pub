@@ -5,6 +5,7 @@
  */
 
 import { setupPreviewEditing, cleanupPreviewEditing, updateEditingContent } from './previewEditor';
+import { debounce } from './utils';
 
 // VSCode Webview API
 declare function acquireVsCodeApi(): {
@@ -34,25 +35,6 @@ interface ExtensionMessage {
   html?: string;
   markdown?: string;
   mode?: EditorMode;
-}
-
-/**
- * 创建防抖函数
- * @param fn 要防抖的函数
- * @param delay 延迟时间（毫秒）
- * @returns 防抖后的函数
- */
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  return ((...args: Parameters<T>) => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = undefined;
-    }, delay);
-  }) as T;
 }
 
 /**
