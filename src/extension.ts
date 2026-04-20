@@ -11,6 +11,7 @@ import { DraftMappingStore } from './storage/draftMapping';
 import { SidebarProvider } from './sidebar/sidebarProvider';
 import { ImageUploadService } from './wechat/imageUpload';
 import { showColorPickerPanel } from './preview/colorPickerPanel';
+import { WechatPubEditorProvider } from './editor/wechatPubEditorProvider';
 
 /**
  * 插件激活入口
@@ -26,6 +27,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // 注册侧边栏视图
   vscode.window.registerTreeDataProvider('wechatPub.sidebar', sidebarProvider);
+
+  // 注册 Custom Editor Provider
+  context.subscriptions.push(WechatPubEditorProvider.register(context));
 
   // 注册命令
   context.subscriptions.push(

@@ -34,7 +34,8 @@
     "onCommand:wechatPub.preview",
     "onCommand:wechatPub.publish",
     "onCommand:wechatPub.uploadImage",
-    "onView:wechatPub.sidebar"
+    "onView:wechatPub.sidebar",
+    "onCustomEditor:wechatPub.markdownEditor"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -55,6 +56,14 @@
         }
       ]
     },
+    "customEditors": [
+      {
+        "viewType": "wechatPub.markdownEditor",
+        "displayName": "微信公众号编辑器",
+        "selector": [{ "filenamePattern": "*.md" }],
+        "priority": "default"
+      }
+    ],
     "commands": [
       {
         "command": "wechatPub.preview",
