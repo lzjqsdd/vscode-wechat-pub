@@ -328,15 +328,11 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
     webviewPanel.onDidChangeViewState(e => {
       if (webviewPanel.active) {
         WechatPubEditorProvider.lastActivePanelKey = document.uri.toString();
-        vscode.commands.executeCommand('setContext', WechatPubEditorProvider.contextKey, true);
-      } else if (WechatPubEditorProvider.lastActivePanelKey === document.uri.toString()) {
-        // 如果这个 panel 失去焦点，检查是否有其他活动的 panel
-        const hasActivePanel = Array.from(WechatPubEditorProvider.activePanels.values())
-          .some(panel => panel.active);
-        if (!hasActivePanel) {
-          vscode.commands.executeCommand('setContext', WechatPubEditorProvider.contextKey, false);
-        }
       }
+      // 只要 Custom Editor 还打开着，就保持 context key 为 true
+      // 只有当所有 Custom Editor 都关闭时才设置为 false
+      const hasOpenPanel = WechatPubEditorProvider.activePanels.size > 0;
+      vscode.commands.executeCommand('setContext', WechatPubEditorProvider.contextKey, hasOpenPanel);
     }, undefined, this.context.subscriptions);
 
     // 创建防抖的预览更新函数（200ms 延迟）

@@ -114,6 +114,16 @@
         "command": "wechatPub.switchToMarkdown",
         "title": "$(code) Markdown",
         "icon": "$(code)"
+      },
+      {
+        "command": "wechatPub.sideSwitchToPreview",
+        "title": "$(eye) Preview",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "wechatPub.sideSwitchToMarkdown",
+        "title": "$(code) Markdown",
+        "icon": "$(code)"
       }
     ],
     "keybindings": [
@@ -134,7 +144,7 @@
       "editor/title": [
         {
           "command": "wechatPub.preview",
-          "when": "editorLangId == markdown",
+          "when": "editorLangId == markdown && !wechatPubCustomEditorActive",
           "group": "navigation@1"
         },
         {
@@ -146,6 +156,16 @@
           "command": "wechatPub.switchToMarkdown",
           "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'markdown'",
           "group": "navigation@3"
+        },
+        {
+          "command": "wechatPub.sideSwitchToPreview",
+          "when": "wechatPubSidePreviewActive && wechatPubSidePreviewMode != 'preview'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "wechatPub.sideSwitchToMarkdown",
+          "when": "wechatPubSidePreviewActive && wechatPubSidePreviewMode != 'markdown'",
+          "group": "navigation@5"
         }
       ],
       "editor/context": [

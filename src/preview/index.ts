@@ -4,4 +4,4 @@
 
 export { PreviewManager } from './previewManager';
 export { ThemeManager, THEMES, type ThemeName } from './themeManager';
-export { generateWebviewHtml } from './webviewHtml';
+export { generatePreviewHtml, generateMarkdownHtml } from './webviewHtml';

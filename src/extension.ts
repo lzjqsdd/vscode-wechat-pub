@@ -277,6 +277,21 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    // 分屏预览模式切换命令
+    vscode.commands.registerCommand('wechatPub.sideSwitchToPreview', () => {
+      const manager = PreviewManager.getInstance();
+      if (manager) {
+        manager.switchMode('preview');
+      }
+    }),
+
+    vscode.commands.registerCommand('wechatPub.sideSwitchToMarkdown', () => {
+      const manager = PreviewManager.getInstance();
+      if (manager) {
+        manager.switchMode('markdown');
+      }
+    }),
+
     // 监听配置变化
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('wechatPub')) {
