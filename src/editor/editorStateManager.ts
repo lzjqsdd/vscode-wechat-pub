@@ -19,11 +19,11 @@ export class EditorStateManager {
   /**
    * 获取文档的编辑模式
    * @param documentUri 文档 URI
-   * @returns 编辑模式，默认为 'preview'
+   * @returns 编辑模式，默认为 'markdown'
    */
   getMode(documentUri: vscode.Uri): EditorMode {
     const modes = this.context.workspaceState.get<Record<string, EditorMode>>(this.stateKey, {});
-    return modes[documentUri.toString()] || 'preview';
+    return modes[documentUri.toString()] || 'markdown';
   }
 
   /**

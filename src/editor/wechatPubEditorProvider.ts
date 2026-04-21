@@ -11,6 +11,7 @@ import { ConfigStore } from '../storage/configStore';
 import { ThemeManager } from '../preview/themeManager';
 import { renderMarkdown } from '../core/renderer';
 import { applyDocumentEdit, debounce } from './documentSync';
+import { PreviewManager } from '../preview/previewManager';
 
 /**
  * 微信公众号编辑器 Provider
@@ -72,25 +73,39 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
       console.log('[wechatPub] lastActivePanelKey:', lastKey);
       console.log('[wechatPub] activePanels size:', WechatPubEditorProvider.activePanels.size);
 
+      let documentUri: vscode.Uri | undefined;
+
       if (lastKey) {
         try {
-          const uri = vscode.Uri.parse(lastKey, true);
+          documentUri = vscode.Uri.parse(lastKey, true);
           console.log('[wechatPub] 使用 lastActivePanelKey 的 URI');
-          WechatPubEditorProvider.switchMode(uri, 'preview');
-          return;
+          WechatPubEditorProvider.switchMode(documentUri, 'preview');
         } catch (e) {
           console.log('[wechatPub] URI 解析失败:', e);
         }
       }
 
       // 如果 lastActivePanelKey 不存在，尝试使用 activeTextEditor
-      const activeEditor = vscode.window.activeTextEditor;
-      if (activeEditor && activeEditor.document.languageId === 'markdown') {
-        console.log('[wechatPub] 使用 activeTextEditor.document.uri');
-        WechatPubEditorProvider.switchMode(activeEditor.document.uri, 'preview');
-      } else {
-        console.log('[wechatPub] 无可用的 Markdown 文档');
-        vscode.window.showWarningMessage('请先打开一个 Markdown 文件');
+      if (!documentUri) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.languageId === 'markdown') {
+          console.log('[wechatPub] 使用 activeTextEditor.document.uri');
+          documentUri = activeEditor.document.uri;
+          WechatPubEditorProvider.switchMode(documentUri, 'preview');
+        } else {
+          console.log('[wechatPub] 无可用的 Markdown 文档');
+          vscode.window.showWarningMessage('请先打开一个 Markdown 文件');
+          return;
+        }
+      }
+
+      // 检查是否有分屏预览窗口，如果没有则自动打开
+      const previewManager = PreviewManager.getInstance();
+      if (previewManager && !previewManager.isActive()) {
+        // 打开分屏预览
+        vscode.workspace.openTextDocument(documentUri).then(doc => {
+          previewManager.showDocument(doc);
+        });
       }
     });
 
