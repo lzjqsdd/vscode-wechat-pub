@@ -176,6 +176,11 @@
           "group": "wechatPub"
         },
         {
+          "command": "wechatPub.updateDraft",
+          "when": "editorLangId == markdown",
+          "group": "wechatPub"
+        },
+        {
           "command": "wechatPub.copyHtml",
           "when": "editorLangId == markdown",
           "group": "wechatPub"
@@ -183,24 +188,34 @@
       ],
       "explorer/context": [
         {
-          "command": "wechatPub.uploadImage",
-          "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
+          "command": "wechatPub.publish",
+          "when": "resourceFilename =~ /\\.md$/",
           "group": "wechatPub@1"
         },
         {
-          "command": "wechatPub.copyImageUrl",
-          "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
+          "command": "wechatPub.updateDraft",
+          "when": "resourceFilename =~ /\\.md$/",
           "group": "wechatPub@2"
         },
         {
-          "command": "wechatPub.copyImageMarkdown",
+          "command": "wechatPub.uploadImage",
           "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
           "group": "wechatPub@3"
         },
         {
-          "command": "wechatPub.removeImageRecord",
+          "command": "wechatPub.copyImageUrl",
           "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
           "group": "wechatPub@4"
+        },
+        {
+          "command": "wechatPub.copyImageMarkdown",
+          "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
+          "group": "wechatPub@5"
+        },
+        {
+          "command": "wechatPub.removeImageRecord",
+          "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
+          "group": "wechatPub@6"
         }
       ],
       "view/item/context": [

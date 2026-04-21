@@ -195,6 +195,57 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * 获取当前活动的 Markdown 文档
+   * 优先从 Custom Editor 获取，其次从 activeTextEditor 获取
+   * @returns 文档 URI 或 undefined
+   */
+  public static getActiveMarkdownUri(): vscode.Uri | undefined {
+    // 优先从 Custom Editor 获取
+    const lastKey = WechatPubEditorProvider.lastActivePanelKey;
+    if (lastKey) {
+      try {
+        return vscode.Uri.parse(lastKey, true);
+      } catch (e) {
+        console.error('[wechatPub] URI 解析失败:', e);
+      }
+    }
+
+    // 其次从 activeTextEditor 获取
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor && activeEditor.document.languageId === 'markdown') {
+      return activeEditor.document.uri;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * 获取当前活动的 Markdown 文档内容
+   * @returns 文档内容或 undefined
+   */
+  public static getActiveMarkdownContent(): string | undefined {
+    const uri = WechatPubEditorProvider.getActiveMarkdownUri();
+    if (!uri) {
+      return undefined;
+    }
+
+    // 从 activeDocuments 获取（Custom Editor 场景）
+    const key = uri.toString();
+    const doc = WechatPubEditorProvider.activeDocuments.get(key);
+    if (doc) {
+      return doc.getText();
+    }
+
+    // 从 activeTextEditor 获取
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor && activeEditor.document.uri.toString() === key) {
+      return activeEditor.document.getText();
+    }
+
+    return undefined;
+  }
+
+  /**
    * 获取 Markdown 编辑内容
    */
   private getMarkdownContent(document: vscode.TextDocument, webview: vscode.Webview): string {

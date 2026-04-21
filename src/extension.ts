@@ -85,31 +85,55 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // 发布命令
-    vscode.commands.registerCommand('wechatPub.publish', async () => {
+    // 发布命令（支持 Custom Editor 和右键菜单传入 URI）
+    vscode.commands.registerCommand('wechatPub.publish', async (uri?: vscode.Uri) => {
       try {
-        const editor = vscode.window.activeTextEditor;
-        if (editor?.document.languageId === 'markdown') {
-          await publisher.publish(editor);
-          sidebarProvider.refresh();
+        let documentUri: vscode.Uri | undefined;
+
+        // 优先使用命令传入的 URI（右键菜单场景）
+        if (uri) {
+          documentUri = uri;
         } else {
-          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          // 其次从 Custom Editor 或 activeTextEditor 获取
+          documentUri = WechatPubEditorProvider.getActiveMarkdownUri();
         }
+
+        if (!documentUri) {
+          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          return;
+        }
+
+        // 打开文档并获取内容
+        const doc = await vscode.workspace.openTextDocument(documentUri);
+        await publisher.publishDocument(doc);
+        sidebarProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(`发布失败: ${getErrorMessage(error)}`);
       }
     }),
 
-    // 更新草稿命令
-    vscode.commands.registerCommand('wechatPub.updateDraft', async () => {
+    // 更新草稿命令（支持 Custom Editor 和右键菜单传入 URI）
+    vscode.commands.registerCommand('wechatPub.updateDraft', async (uri?: vscode.Uri) => {
       try {
-        const editor = vscode.window.activeTextEditor;
-        if (editor?.document.languageId === 'markdown') {
-          await publisher.publish(editor);
-          sidebarProvider.refresh();
+        let documentUri: vscode.Uri | undefined;
+
+        // 优先使用命令传入的 URI（右键菜单场景）
+        if (uri) {
+          documentUri = uri;
         } else {
-          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          // 其次从 Custom Editor 或 activeTextEditor 获取
+          documentUri = WechatPubEditorProvider.getActiveMarkdownUri();
         }
+
+        if (!documentUri) {
+          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          return;
+        }
+
+        // 打开文档并获取内容
+        const doc = await vscode.workspace.openTextDocument(documentUri);
+        await publisher.publishDocument(doc);
+        sidebarProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(`更新草稿失败: ${getErrorMessage(error)}`);
       }
