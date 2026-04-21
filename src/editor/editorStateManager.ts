@@ -46,4 +46,11 @@ export class EditorStateManager {
     delete modes[documentUri.toString()];
     this.context.workspaceState.update(this.stateKey, modes);
   }
+
+  /**
+   * 清除所有编辑模式状态
+   */
+  clearAllModes(): void {
+    this.context.workspaceState.update(this.stateKey, {});
+  }
 }

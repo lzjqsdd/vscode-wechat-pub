@@ -52,6 +52,9 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
    */
   public static register(context: vscode.ExtensionContext): vscode.Disposable[] {
     const stateManager = new EditorStateManager(context);
+    // 清除所有旧的编辑模式状态，确保默认进入 markdown 模式
+    stateManager.clearAllModes();
+
     const configStore = new ConfigStore(context);
     const provider = new WechatPubEditorProvider(context, stateManager, configStore);
 
