@@ -114,11 +114,6 @@
         "command": "wechatPub.switchToMarkdown",
         "title": "$(code) Markdown",
         "icon": "$(code)"
-      },
-      {
-        "command": "wechatPub.openSidePreview",
-        "title": "$(split-horizontal) 分屏预览",
-        "icon": "$(split-horizontal)"
       }
     ],
     "keybindings": [
@@ -151,11 +146,6 @@
           "command": "wechatPub.switchToMarkdown",
           "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'markdown'",
           "group": "navigation@3"
-        },
-        {
-          "command": "wechatPub.openSidePreview",
-          "when": "wechatPubCustomEditorActive",
-          "group": "navigation@4"
         }
       ],
       "editor/context": [
