@@ -1,10 +1,11 @@
 /**
  * Markdown 模式 Webview 内容生成器
- * 生成用于 Custom Editor 的 Markdown 模式 HTML 内容
+ * 生成用于 Custom Editor 的 Markdown 编辑模式 HTML 内容
  */
 
 import * as vscode from 'vscode';
 import { ConfigStore } from '../storage/configStore';
+import { ThemeManager } from '../preview/themeManager';
 
 /**
  * 获取 VSCode 颜色主题类型
@@ -39,18 +40,20 @@ export function escapeHtmlForTextarea(text: string): string {
 }
 
 /**
- * 生成 Markdown 模式的 HTML
+ * 生成 Markdown 编辑模式的 HTML
  * @param webview Webview 实例
  * @param extensionUri 扩展 URI
- * @param markdown Markdown 源码
+ * @param document 文档对象
  * @param configStore 配置存储
+ * @param themeManager 主题管理器（编辑模式下不需要，但保持接口一致）
  * @returns HTML 字符串
  */
 export function getMarkdownWebviewContent(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
-  markdown: string,
-  configStore: ConfigStore
+  document: vscode.TextDocument,
+  configStore: ConfigStore,
+  themeManager: ThemeManager
 ): string {
   // 获取编译后的脚本 URI
   const scriptUri = webview.asWebviewUri(
@@ -63,15 +66,15 @@ export function getMarkdownWebviewContent(
 
   // 主题颜色
   const toolbarBg = isDark ? '#333333' : '#ffffff';
-  const buttonActiveBg = isDark ? '#0e639c' : '#007acc';
-  const buttonBg = isDark ? '#454545' : '#e0e0e0';
-  const buttonTextColor = isDark ? '#ffffff' : '#333333';
+  const buttonBg = isDark ? '#0e639c' : '#007acc';
+  const buttonTextColor = '#ffffff';
   const contentBg = isDark ? '#252526' : '#ffffff';
   const editorTextColor = isDark ? '#d4d4d4' : '#333333';
   const borderColor = isDark ? '#3c3c3c' : '#e0e0e0';
 
-  // 转义 Markdown 内容
-  const escapedContent = escapeHtmlForTextarea(markdown);
+  // 获取 Markdown 内容
+  const content = document.getText();
+  const escapedContent = escapeHtmlForTextarea(content);
 
   // CSP 配置
   const cspSource = webview.cspSource;
@@ -91,7 +94,7 @@ export function getMarkdownWebviewContent(
       background: ${contentBg};
     }
 
-    /* 工具栏样式 */
+    /* 工具栏样式 - 只有一个 Preview 按钮 */
     .toolbar {
       position: sticky;
       top: 0;
@@ -112,16 +115,8 @@ export function getMarkdownWebviewContent(
       font-size: 14px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       transition: background-color 0.2s;
-    }
-
-    .toolbar-btn.preview-btn {
       background: ${buttonBg};
       color: ${buttonTextColor};
-    }
-
-    .toolbar-btn.markdown-btn {
-      background: ${buttonActiveBg};
-      color: #ffffff;
     }
 
     .toolbar-btn:hover {
@@ -149,10 +144,9 @@ export function getMarkdownWebviewContent(
   </style>
 </head>
 <body>
-  <!-- 工具栏 -->
+  <!-- 工具栏 - 只有一个 Preview 按钮用于打开右侧分屏预览 -->
   <div class="toolbar">
-    <button id="btn-preview" class="toolbar-btn preview-btn">Preview</button>
-    <button id="btn-markdown" class="toolbar-btn markdown-btn">Markdown</button>
+    <button id="btn-open-preview" class="toolbar-btn">Preview</button>
   </div>
 
   <!-- Markdown 编辑器 -->
@@ -161,7 +155,7 @@ export function getMarkdownWebviewContent(
   <!-- 注入样式配置供脚本使用 -->
   <script>
     window.__webviewStyles = {
-      buttonActiveBg: '${buttonActiveBg}',
+      buttonActiveBg: '${buttonBg}',
       buttonBg: '${buttonBg}',
       buttonTextColor: '${buttonTextColor}'
     };

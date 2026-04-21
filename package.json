@@ -111,11 +111,6 @@
         "icon": "$(eye)"
       },
       {
-        "command": "wechatPub.switchToMarkdown",
-        "title": "$(code) Markdown",
-        "icon": "$(code)"
-      },
-      {
         "command": "wechatPub.sideSwitchToPreview",
         "title": "$(eye) Preview",
         "icon": "$(eye)"
@@ -144,12 +139,6 @@
         "key": "ctrl+alt+p",
         "mac": "cmd+alt+p",
         "when": "wechatPubCustomEditorActive"
-      },
-      {
-        "command": "wechatPub.switchToMarkdown",
-        "key": "ctrl+alt+m",
-        "mac": "cmd+alt+m",
-        "when": "wechatPubCustomEditorActive"
       }
     ],
     "menus": {
@@ -161,23 +150,18 @@
         },
         {
           "command": "wechatPub.switchToPreview",
-          "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'preview'",
+          "when": "wechatPubCustomEditorActive",
           "group": "navigation@2"
-        },
-        {
-          "command": "wechatPub.switchToMarkdown",
-          "when": "wechatPubCustomEditorActive && wechatPubEditorMode != 'markdown'",
-          "group": "navigation@3"
         },
         {
           "command": "wechatPub.sideSwitchToPreview",
           "when": "wechatPubSidePreviewActive && wechatPubSidePreviewMode != 'preview'",
-          "group": "navigation@4"
+          "group": "navigation@3"
         },
         {
           "command": "wechatPub.sideSwitchToMarkdown",
           "when": "wechatPubSidePreviewActive && wechatPubSidePreviewMode != 'markdown'",
-          "group": "navigation@5"
+          "group": "navigation@4"
         }
       ],
       "editor/context": [
