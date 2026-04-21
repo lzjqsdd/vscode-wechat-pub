@@ -124,6 +124,18 @@
         "command": "wechatPub.sideSwitchToMarkdown",
         "title": "$(code) Markdown",
         "icon": "$(code)"
+      },
+      {
+        "command": "wechatPub.copyImageUrl",
+        "title": "$(link) 复制图片 URL"
+      },
+      {
+        "command": "wechatPub.copyImageMarkdown",
+        "title": "$(markdown) 复制 Markdown 格式"
+      },
+      {
+        "command": "wechatPub.removeImageRecord",
+        "title": "$(trash) 删除记录"
       }
     ],
     "keybindings": [
@@ -190,6 +202,23 @@
           "command": "wechatPub.uploadImage",
           "when": "resourceFilename =~ /\\.png$|\\.jpg$|\\.jpeg$|\\.gif$|\\.webp$/",
           "group": "wechatPub"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "wechatPub.copyImageUrl",
+          "when": "viewItem == image-item",
+          "group": "image@1"
+        },
+        {
+          "command": "wechatPub.copyImageMarkdown",
+          "when": "viewItem == image-item",
+          "group": "image@2"
+        },
+        {
+          "command": "wechatPub.removeImageRecord",
+          "when": "viewItem == image-item",
+          "group": "image@3"
         }
       ]
     },

@@ -7,8 +7,11 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ConfigStore } from '../storage/configStore';
 import { DraftMappingStore, DraftMapping } from '../storage/draftMapping';
+import { ImageRegistry, ImageRecord } from '../storage/imageRegistry';
+import { ImageItem } from './imageItems';
 import { getActionItems, ActionItem } from './actionItems';
 import {
   SettingItem,
@@ -27,8 +30,8 @@ import {
 /**
  * 节点类型
  */
-type NodeType = 'group-action' | 'group-setting' | 'group-draft'
-  | 'action' | 'setting-group' | 'setting-subgroup' | 'setting-option' | 'draft-item';
+type NodeType = 'group-action' | 'group-setting' | 'group-draft' | 'group-images'
+  | 'action' | 'setting-group' | 'setting-subgroup' | 'setting-option' | 'draft-item' | 'image-item';
 
 /**
  * 侧边栏节点
@@ -70,16 +73,18 @@ export class SidebarItem extends vscode.TreeItem {
 /**
  * 侧边栏数据提供器
  */
-export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<SidebarItem | undefined>();
+export class SidebarProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined>();
   onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private configStore: ConfigStore;
   private draftStore: DraftMappingStore;
+  private imageRegistry: ImageRegistry;
 
-  constructor(configStore: ConfigStore, draftStore: DraftMappingStore) {
+  constructor(configStore: ConfigStore, draftStore: DraftMappingStore, imageRegistry: ImageRegistry) {
     this.configStore = configStore;
     this.draftStore = draftStore;
+    this.imageRegistry = imageRegistry;
   }
 
   /**
@@ -92,25 +97,27 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
   /**
    * 获取树节点
    */
-  getTreeItem(element: SidebarItem): vscode.TreeItem {
+  getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
   /**
    * 获取子节点
    */
-  getChildren(element?: SidebarItem): Thenable<SidebarItem[]> {
+  getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
     if (!element) {
-      // 根节点：三个分组
+      // 根节点：四个分组
       return Promise.resolve([
         new SidebarItem('快捷操作', vscode.TreeItemCollapsibleState.Collapsed, 'group-action'),
         new SidebarItem('设置', vscode.TreeItemCollapsibleState.Collapsed, 'group-setting'),
-        new SidebarItem('已发布草稿', vscode.TreeItemCollapsibleState.Collapsed, 'group-draft')
+        new SidebarItem('已发布草稿', vscode.TreeItemCollapsibleState.Collapsed, 'group-draft'),
+        new ImageItem('已上传图片', vscode.TreeItemCollapsibleState.Collapsed, 'group-images')
       ]);
     }
 
     // 根据节点类型返回子节点
-    switch (element.nodeType) {
+    const nodeType = (element as SidebarItem).nodeType || (element as ImageItem).nodeType;
+    switch (nodeType) {
       case 'group-action':
         return this.getActionChildren();
 
@@ -120,11 +127,14 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
       case 'group-draft':
         return this.getDraftChildren();
 
+      case 'group-images':
+        return this.getImageChildren();
+
       case 'setting-group':
         return this.getSettingSubgroupChildren(element);
 
       case 'setting-subgroup':
-        return this.getSettingOptionChildren(element.value || '');
+        return this.getSettingOptionChildren((element as SidebarItem).value || '');
 
       default:
         return Promise.resolve([]);
@@ -167,8 +177,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
   /**
    * 获取设置二级分组子节点
    */
-  private getSettingSubgroupChildren(element: SidebarItem): Promise<SidebarItem[]> {
-    const groupKey = element.value || '';
+  private getSettingSubgroupChildren(element: vscode.TreeItem): Promise<SidebarItem[]> {
+    const groupKey = (element as SidebarItem).value || '';
     const group = SETTING_GROUPS.find(g => g.key === groupKey);
 
     if (!group) {
@@ -458,6 +468,30 @@ export class SidebarProvider implements vscode.TreeDataProvider<SidebarItem> {
         arguments: [draft.filePath]
       };
       return item;
+    }));
+  }
+
+  /**
+   * 获取已上传图片子节点
+   */
+  private getImageChildren(): Promise<ImageItem[]> {
+    const images = this.imageRegistry.getAll();
+
+    if (images.length === 0) {
+      return Promise.resolve([
+        new ImageItem('暂无已上传图片', vscode.TreeItemCollapsibleState.None, 'image-item')
+      ]);
+    }
+
+    return Promise.resolve(images.map(img => {
+      const absolutePath = this.imageRegistry.getAbsolutePath(img.localPath);
+      return new ImageItem(
+        img.filename || path.basename(img.localPath),
+        vscode.TreeItemCollapsibleState.None,
+        'image-item',
+        img,
+        absolutePath
+      );
     }));
   }
 }

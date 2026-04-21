@@ -4,12 +4,16 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { PreviewManager } from './preview/previewManager';
 import { Publisher } from './wechat/publisher';
 import { ConfigStore } from './storage/configStore';
 import { DraftMappingStore } from './storage/draftMapping';
+import { ImageRegistry } from './storage/imageRegistry';
 import { SidebarProvider } from './sidebar/sidebarProvider';
 import { ImageUploadService } from './wechat/imageUpload';
+import { ImageFileDecorationProvider } from './explorer/fileDecorationProvider';
+import { ImageItem } from './sidebar/imageItems';
 import { showColorPickerPanel } from './preview/colorPickerPanel';
 import { WechatPubEditorProvider } from './editor/wechatPubEditorProvider';
 
@@ -25,13 +29,23 @@ function getErrorMessage(error: unknown): string {
  * 插件激活入口
  */
 export function activate(context: vscode.ExtensionContext) {
+  // 获取工作区根路径
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
   // 初始化各模块
   const configStore = new ConfigStore(context);
   const draftStore = new DraftMappingStore(context);
+  const imageRegistry = new ImageRegistry(workspaceRoot);
   const previewManager = new PreviewManager(context.extensionUri, context);
   const publisher = new Publisher(configStore, draftStore, context.extensionUri.fsPath);
-  const sidebarProvider = new SidebarProvider(configStore, draftStore);
-  const imageUploadService = new ImageUploadService(configStore);
+  const sidebarProvider = new SidebarProvider(configStore, draftStore, imageRegistry);
+  const imageUploadService = new ImageUploadService(configStore, imageRegistry);
+
+  // 注册 FileDecorationProvider
+  const decorationProvider = new ImageFileDecorationProvider(imageRegistry);
+  context.subscriptions.push(
+    vscode.window.registerFileDecorationProvider(decorationProvider)
+  );
 
   // 注册侧边栏视图
   vscode.window.registerTreeDataProvider('wechatPub.sidebar', sidebarProvider);
@@ -289,6 +303,53 @@ export function activate(context: vscode.ExtensionContext) {
       const manager = PreviewManager.getInstance();
       if (manager) {
         manager.switchMode('markdown');
+      }
+    }),
+
+    // 打开图片文件
+    vscode.commands.registerCommand('wechatPub.openImageFile', async (absolutePath: string) => {
+      try {
+        if (absolutePath && fs.existsSync(absolutePath)) {
+          const uri = vscode.Uri.file(absolutePath);
+          await vscode.commands.executeCommand('vscode.open', uri);
+        } else {
+          vscode.window.showWarningMessage('图片文件不存在或已移动');
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`打开图片失败: ${getErrorMessage(error)}`);
+      }
+    }),
+
+    // 复制图片 URL
+    vscode.commands.registerCommand('wechatPub.copyImageUrl', async (item: ImageItem) => {
+      if (item?.record?.wechatUrl) {
+        await vscode.env.clipboard.writeText(item.record.wechatUrl);
+        vscode.window.showInformationMessage('图片 URL 已复制');
+      }
+    }),
+
+    // 复制 Markdown 格式
+    vscode.commands.registerCommand('wechatPub.copyImageMarkdown', async (item: ImageItem) => {
+      if (item?.record?.wechatUrl) {
+        const alt = item.record.filename || 'image';
+        const md = `![${alt}](${item.record.wechatUrl})`;
+        await vscode.env.clipboard.writeText(md);
+        vscode.window.showInformationMessage('Markdown 格式已复制');
+      }
+    }),
+
+    // 删除图片记录
+    vscode.commands.registerCommand('wechatPub.removeImageRecord', async (item: ImageItem) => {
+      if (item?.record) {
+        const confirm = await vscode.window.showWarningMessage(
+          '确定删除此图片记录？',
+          '确定', '取消'
+        );
+        if (confirm === '确定') {
+          imageRegistry.remove(item.record.localPath);
+          sidebarProvider.refresh();
+          vscode.window.showInformationMessage('记录已删除');
+        }
       }
     }),
 

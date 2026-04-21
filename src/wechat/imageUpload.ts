@@ -8,14 +8,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { WechatApiClient } from './api';
 import { ConfigStore } from '../storage/configStore';
+import { ImageRegistry } from '../storage/imageRegistry';
 
 export class ImageUploadService {
   private api: WechatApiClient;
   private configStore: ConfigStore;
+  private imageRegistry: ImageRegistry;
 
-  constructor(configStore: ConfigStore) {
+  constructor(configStore: ConfigStore, imageRegistry: ImageRegistry) {
     this.configStore = configStore;
     this.api = new WechatApiClient(configStore.getWechatConfig());
+    this.imageRegistry = imageRegistry;
   }
 
   /**
@@ -149,6 +152,10 @@ export class ImageUploadService {
     }, async () => {
       try {
         const url = await this.uploadLocalImage(imagePath);
+
+        // 自动记录到 ImageRegistry
+        this.imageRegistry.register(imagePath, url);
+
         vscode.window.showInformationMessage(`图片上传成功`);
 
         // 询问下一步操作
