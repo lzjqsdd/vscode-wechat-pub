@@ -131,7 +131,7 @@
       },
       {
         "command": "wechatPub.copyImageMarkdown",
-        "title": "$(markdown) 复制 Markdown 格式"
+        "title": "$(markdown) 复制完整 Markdown 链接"
       },
       {
         "command": "wechatPub.removeImageRecord",

@@ -16,10 +16,10 @@ export class ImageItem extends vscode.TreeItem {
     public readonly absolutePath?: string
   ) {
     super(label, collapsibleState);
-    this.contextValue = nodeType;
 
     if (nodeType === 'image-item' && record) {
-      // 图片节点设置
+      // 有数据的图片节点 - 设置 contextValue 用于右键菜单
+      this.contextValue = 'image-item';
       this.tooltip = `本地: ${record.localPath}\nURL: ${record.wechatUrl}\n上传: ${this.formatTime(record.uploadTime)}`;
       this.description = this.formatTime(record.uploadTime);
       this.iconPath = new vscode.ThemeIcon('image');
@@ -32,6 +32,9 @@ export class ImageItem extends vscode.TreeItem {
           arguments: [absolutePath]
         };
       }
+    } else if (nodeType === 'image-item') {
+      // 空节点（暂无已上传图片）- 不设置 contextValue，不显示右键菜单
+      this.iconPath = new vscode.ThemeIcon('info');
     } else if (nodeType === 'group-images') {
       // 分组节点
       this.iconPath = new vscode.ThemeIcon('folder');

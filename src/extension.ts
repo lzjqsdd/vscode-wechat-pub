@@ -334,7 +334,7 @@ export function activate(context: vscode.ExtensionContext) {
         const alt = item.record.filename || 'image';
         const md = `![${alt}](${item.record.wechatUrl})`;
         await vscode.env.clipboard.writeText(md);
-        vscode.window.showInformationMessage('Markdown 格式已复制');
+        vscode.window.showInformationMessage('完整 Markdown 链接已复制');
       }
     }),
 
