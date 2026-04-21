@@ -111,6 +111,15 @@ export class ImageRegistry {
     return this.data.images.find(img => img.localPath === relativePath)?.wechatUrl;
   }
 
+  /** 根据微信 URL 获取本地路径 */
+  getLocalPathByUrl(wechatUrl: string): string | undefined {
+    const record = this.data.images.find(img => img.wechatUrl === wechatUrl);
+    if (!record) {
+      return undefined;
+    }
+    return this.getAbsolutePath(record.localPath);
+  }
+
   /** 获取所有图片记录 */
   getAll(): ImageRecord[] {
     return this.data.images;

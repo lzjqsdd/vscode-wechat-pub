@@ -4,9 +4,12 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { WechatApiClient } from './api';
 import { ConfigStore } from '../storage/configStore';
 import { DraftMappingStore } from '../storage/draftMapping';
+import { ImageRegistry } from '../storage/imageRegistry';
 import { renderMarkdown } from '../core/renderer';
 import { copyWechatHtml } from '../core/utils/htmlCopy';
 import { ThemeManager, ThemeName } from '../preview/themeManager';
@@ -14,17 +17,60 @@ import { ThemeManager, ThemeName } from '../preview/themeManager';
 export class Publisher {
   private api: WechatApiClient;
   private draftStore: DraftMappingStore;
+  private imageRegistry: ImageRegistry;
   private themeManager: ThemeManager;
 
   constructor(
     private configStore: ConfigStore,
     draftStore: DraftMappingStore,
+    imageRegistry: ImageRegistry,
     extensionPath: string
   ) {
     const config = configStore.getWechatConfig();
     this.api = new WechatApiClient(config);
     this.draftStore = draftStore;
+    this.imageRegistry = imageRegistry;
     this.themeManager = new ThemeManager(extensionPath);
+  }
+
+  /**
+   * 从 HTML 中提取微信图片 URL
+   */
+  private extractWechatImageUrls(html: string): string[] {
+    const regex = /https?:\/\/mmbiz\.qpic\.cn[^"']*/gi;
+    const matches = html.match(regex) || [];
+    return matches;
+  }
+
+  /**
+   * 获取封面图 media_id
+   * 优先级：1. 从文章中提取已上传图片并上传为永久素材  2. 使用上次保存的封面图
+   */
+  private async getThumbMediaId(html: string, documentPath: string): Promise<string | undefined> {
+    // 尝试从文章中提取已上传的微信图片
+    const wechatUrls = this.extractWechatImageUrls(html);
+
+    for (const url of wechatUrls) {
+      // 查找对应的本地图片路径
+      const localPath = this.imageRegistry.getLocalPathByUrl(url);
+      if (localPath && fs.existsSync(localPath)) {
+        try {
+          // 上传为永久素材作为封面图
+          const buffer = fs.readFileSync(localPath);
+          const filename = path.basename(localPath);
+          const mediaId = await this.api.uploadMaterial(buffer, filename);
+          // 保存封面图 media_id
+          this.configStore.setLastThumbMediaId(mediaId);
+          return mediaId;
+        } catch (error) {
+          console.error('[wechatPub] 上传封面图失败:', error);
+          // 继续尝试下一个图片
+        }
+      }
+    }
+
+    // 如果文章中没有可用的图片，使用上次保存的封面图
+    return this.configStore.getLastThumbMediaId();
   }
 
   async publish(editor: vscode.TextEditor): Promise<void> {
@@ -61,7 +107,15 @@ export class Publisher {
           await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
           vscode.window.showInformationMessage(`草稿更新成功`);
         } else {
-          const mediaId = await this.api.addDraft(title, wechatHtml);
+          // 获取封面图
+          const thumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);
+
+          if (!thumbMediaId) {
+            vscode.window.showWarningMessage('请先上传一张图片作为封面图，或在文章中添加已上传的图片');
+            return;
+          }
+
+          const mediaId = await this.api.addDraft(title, wechatHtml, thumbMediaId);
           this.draftStore.associate(filePath, mediaId, title);
           vscode.window.showInformationMessage(`发布到草稿箱成功`);
         }
@@ -108,7 +162,15 @@ export class Publisher {
           await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
           vscode.window.showInformationMessage(`草稿更新成功`);
         } else {
-          const mediaId = await this.api.addDraft(title, wechatHtml);
+          // 获取封面图
+          const thumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);
+
+          if (!thumbMediaId) {
+            vscode.window.showWarningMessage('请先上传一张图片作为封面图，或在文章中添加已上传的图片');
+            return;
+          }
+
+          const mediaId = await this.api.addDraft(title, wechatHtml, thumbMediaId);
           this.draftStore.associate(filePath, mediaId, title);
           vscode.window.showInformationMessage(`发布到草稿箱成功`);
         }

@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
   const draftStore = new DraftMappingStore(context);
   const imageRegistry = new ImageRegistry(workspaceRoot);
   const previewManager = new PreviewManager(context.extensionUri, context);
-  const publisher = new Publisher(configStore, draftStore, context.extensionUri.fsPath);
+  const publisher = new Publisher(configStore, draftStore, imageRegistry, context.extensionUri.fsPath);
   const sidebarProvider = new SidebarProvider(configStore, draftStore, imageRegistry);
   const imageUploadService = new ImageUploadService(configStore, imageRegistry);
 
