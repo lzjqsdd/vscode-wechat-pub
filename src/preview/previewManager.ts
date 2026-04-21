@@ -61,11 +61,33 @@ export class PreviewManager {
       vscodeThemeKind: this.getVSCodeThemeKind()
     });
     this.currentDocument = editor.document;
+    this._showPanel();
+    this.update(editor);
+    this._setupDocumentListener();
+  }
 
-    // 如果面板已存在，直接显示并更新
+  /**
+   * 显示预览面板（从文档直接打开，无需编辑器）
+   * @param document 文档
+   */
+  showDocument(document: vscode.TextDocument): void {
+    console.log('[wechatPub] showDocument() called:', {
+      documentPath: document.uri.fsPath,
+      documentLanguageId: document.languageId,
+      contentLength: document.getText().length,
+    });
+    this.currentDocument = document;
+    this._showPanel();
+    this._updateFromDocument(document);
+    this._setupDocumentListener();
+  }
+
+  /**
+   * 创建或显示 Webview 面板
+   */
+  private _showPanel(): void {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Two);
-      this.update(editor);
       return;
     }
 
@@ -85,16 +107,27 @@ export class PreviewManager {
       this._cleanup();
     });
 
-    // 初始更新
-    this.update(editor);
+    // 监听 VSCode 颜色主题变化
+    const colorThemeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
+      if (this.panel && this.currentDocument) {
+        this._updateFromDocument(this.currentDocument);
+      }
+    });
+    this.disposables.push(colorThemeDisposable);
+  }
+
+  /**
+   * 设置文档变化监听
+   */
+  private _setupDocumentListener(): void {
+    // 避免重复注册
+    if (this._documentListenerRegistered) return;
+    this._documentListenerRegistered = true;
 
     // 监听文档变化，实时更新预览
     const changeDisposable = vscode.workspace.onDidChangeTextDocument(e => {
-      if (this.currentDocument && e.document.uri.fsPath === this.currentDocument.uri.fsPath) {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor && activeEditor.document.uri.fsPath === this.currentDocument.uri.fsPath) {
-          this.update(activeEditor);
-        }
+      if (this.currentDocument && e.document.uri.toString() === this.currentDocument.uri.toString()) {
+        this._updateFromDocument(e.document);
       }
     });
     this.disposables.push(changeDisposable);
@@ -103,39 +136,40 @@ export class PreviewManager {
     const switchDisposable = vscode.window.onDidChangeActiveTextEditor(e => {
       if (e && e.document.languageId === 'markdown' && this.panel) {
         this.currentDocument = e.document;
-        this.update(e);
+        this._updateFromDocument(e.document);
       }
     });
     this.disposables.push(switchDisposable);
-
-    // 监听 VSCode 颜色主题变化
-    const colorThemeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
-      if (this.panel) {
-        this.refresh();
-      }
-    });
-    this.disposables.push(colorThemeDisposable);
   }
+
+  private _documentListenerRegistered = false;
 
   /**
    * 更新预览内容
    * @param editor 当前文本编辑器
    */
   update(editor: vscode.TextEditor): void {
+    this._updateFromDocument(editor.document);
+  }
+
+  /**
+   * 从文档更新预览内容
+   * @param document 文档
+   */
+  private _updateFromDocument(document: vscode.TextDocument): void {
     if (!this.panel) {
-      console.log('[wechatPub] update() skipped: no panel');
+      console.log('[wechatPub] _updateFromDocument() skipped: no panel');
       return;
     }
 
-    console.log('[wechatPub] update() called:', {
-      documentPath: editor.document.uri.fsPath,
+    console.log('[wechatPub] _updateFromDocument() called:', {
+      documentPath: document.uri.fsPath,
       currentDocumentPath: this.currentDocument?.uri.fsPath,
-      activeEditorPath: vscode.window.activeTextEditor?.document.uri.fsPath,
       vscodeThemeKind: this.getVSCodeThemeKind()
     });
 
     // 获取文档内容
-    const content = editor.document.getText();
+    const content = document.getText();
 
     // 渲染 Markdown
     const { html } = renderMarkdown(content, {
@@ -170,31 +204,7 @@ export class PreviewManager {
 
     // 优先使用记住的文档
     if (this.currentDocument) {
-      // 找到该文档对应的编辑器
-      const visibleEditors = vscode.window.visibleTextEditors;
-      const targetEditor = visibleEditors.find(e => e.document.uri.fsPath === this.currentDocument!.uri.fsPath);
-      if (targetEditor) {
-        this.update(targetEditor);
-        return;
-      }
-      // 如果找不到编辑器，直接用文档内容更新
-      const content = this.currentDocument.getText();
-      const { html } = renderMarkdown(content, {
-        countStatus: this.configStore.getCountStatus(),
-        isMacCodeBlock: this.configStore.getMacCodeBlock(),
-        citeStatus: this.configStore.getCiteStatus(),
-        legend: this.configStore.getLegend(),
-      });
-      const theme = this.configStore.getTheme() as ThemeName;
-      const color = this.configStore.getPrimaryColor();
-      const vscodeThemeKind = this.getVSCodeThemeKind();
-      const css = this.themeManager.getThemeCSS(theme, color, vscodeThemeKind, {
-        fontFamily: this.configStore.getFontFamily(),
-        fontSize: this.configStore.getFontSize(),
-        useIndent: this.configStore.getUseIndent(),
-        useJustify: this.configStore.getUseJustify(),
-      });
-      this.panel.webview.html = generateWebviewHtml(html, css, vscodeThemeKind);
+      this._updateFromDocument(this.currentDocument);
       return;
     }
 
@@ -202,7 +212,7 @@ export class PreviewManager {
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === 'markdown') {
       this.currentDocument = editor.document;
-      this.update(editor);
+      this._updateFromDocument(editor.document);
     }
   }
 

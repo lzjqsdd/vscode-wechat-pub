@@ -277,6 +277,23 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    // 分屏预览命令（从 Custom Editor 打开右侧预览窗口）
+    vscode.commands.registerCommand('wechatPub.openSidePreview', () => {
+      try {
+        const lastKey = WechatPubEditorProvider.getLastActivePanelKey();
+        if (lastKey) {
+          const uri = vscode.Uri.parse(lastKey, true);
+          vscode.workspace.openTextDocument(uri).then(doc => {
+            previewManager.showDocument(doc);
+          });
+        } else {
+          vscode.window.showWarningMessage('请先打开一个 Markdown 文件');
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`打开分屏预览失败: ${getErrorMessage(error)}`);
+      }
+    }),
+
     // 监听配置变化
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('wechatPub')) {
