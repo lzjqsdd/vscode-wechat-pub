@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import { PreviewManager } from './preview/previewManager';
 import { Publisher } from './wechat/publisher';
 import { ConfigStore } from './storage/configStore';
@@ -320,33 +321,72 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // 复制图片 URL
-    vscode.commands.registerCommand('wechatPub.copyImageUrl', async (item: ImageItem) => {
-      if (item?.record?.wechatUrl) {
-        await vscode.env.clipboard.writeText(item.record.wechatUrl);
+    // 复制图片 URL（支持侧边栏节点和文件树 URI）
+    vscode.commands.registerCommand('wechatPub.copyImageUrl', async (itemOrUri: ImageItem | vscode.Uri) => {
+      let url: string | undefined;
+
+      // 判断参数类型
+      if (itemOrUri instanceof vscode.Uri) {
+        // 从文件树传入的 URI
+        url = imageRegistry.getUrlByLocalPath(itemOrUri.fsPath);
+      } else if (itemOrUri?.record?.wechatUrl) {
+        // 从侧边栏传入的 ImageItem
+        url = itemOrUri.record.wechatUrl;
+      }
+
+      if (url) {
+        await vscode.env.clipboard.writeText(url);
         vscode.window.showInformationMessage('图片 URL 已复制');
+      } else {
+        vscode.window.showWarningMessage('该图片未上传到公众号');
       }
     }),
 
-    // 复制 Markdown 格式
-    vscode.commands.registerCommand('wechatPub.copyImageMarkdown', async (item: ImageItem) => {
-      if (item?.record?.wechatUrl) {
-        const alt = item.record.filename || 'image';
-        const md = `![${alt}](${item.record.wechatUrl})`;
+    // 复制 Markdown 格式（支持侧边栏节点和文件树 URI）
+    vscode.commands.registerCommand('wechatPub.copyImageMarkdown', async (itemOrUri: ImageItem | vscode.Uri) => {
+      let url: string | undefined;
+      let filename: string | undefined;
+
+      // 判断参数类型
+      if (itemOrUri instanceof vscode.Uri) {
+        // 从文件树传入的 URI
+        url = imageRegistry.getUrlByLocalPath(itemOrUri.fsPath);
+        filename = path.basename(itemOrUri.fsPath);
+      } else if (itemOrUri?.record?.wechatUrl) {
+        // 从侧边栏传入的 ImageItem
+        url = itemOrUri.record.wechatUrl;
+        filename = itemOrUri.record.filename || 'image';
+      }
+
+      if (url) {
+        const md = `![${filename}](${url})`;
         await vscode.env.clipboard.writeText(md);
         vscode.window.showInformationMessage('完整 Markdown 链接已复制');
+      } else {
+        vscode.window.showWarningMessage('该图片未上传到公众号');
       }
     }),
 
-    // 删除图片记录
-    vscode.commands.registerCommand('wechatPub.removeImageRecord', async (item: ImageItem) => {
-      if (item?.record) {
+    // 删除图片记录（支持侧边栏节点和文件树 URI）
+    vscode.commands.registerCommand('wechatPub.removeImageRecord', async (itemOrUri: ImageItem | vscode.Uri) => {
+      let localPath: string | undefined;
+
+      // 判断参数类型
+      if (itemOrUri instanceof vscode.Uri) {
+        // 从文件树传入的 URI
+        localPath = itemOrUri.fsPath;
+      } else if (itemOrUri?.record?.localPath) {
+        // 从侧边栏传入的 ImageItem
+        localPath = imageRegistry.getAbsolutePath(itemOrUri.record.localPath);
+      }
+
+      if (localPath) {
         const confirm = await vscode.window.showWarningMessage(
           '确定删除此图片记录？',
           '确定', '取消'
         );
         if (confirm === '确定') {
-          imageRegistry.remove(item.record.localPath);
+          imageRegistry.remove(localPath);
           sidebarProvider.refresh();
           vscode.window.showInformationMessage('记录已删除');
         }
