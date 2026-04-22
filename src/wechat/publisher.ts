@@ -89,14 +89,22 @@ export class Publisher {
       const content = editor.document.getText();
       const { html, yamlData } = renderMarkdown(content, {
         countStatus: this.configStore.getCountStatus(),
-        isMacCodeBlock: this.configStore.getMacCodeBlock()
+        isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
       });
 
       const title = yamlData.title || this.extractTitle(content) || '未命名文章';
 
-      // 生成公众号格式 HTML
+      // 生成公众号格式 HTML（使用与预览相同的配置）
       const theme = this.configStore.getTheme() as ThemeName;
-      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const color = this.configStore.getPrimaryColor();
+      const css = this.themeManager.getThemeCSS(theme, color, 'light', {
+        fontFamily: this.configStore.getFontFamily(),
+        fontSize: this.configStore.getFontSize(),
+        useIndent: this.configStore.getUseIndent(),
+        useJustify: this.configStore.getUseJustify(),
+      });
       const wechatHtml = copyWechatHtml(html, css);
 
       // 检查是否已有草稿
@@ -144,14 +152,22 @@ export class Publisher {
       const content = document.getText();
       const { html, yamlData } = renderMarkdown(content, {
         countStatus: this.configStore.getCountStatus(),
-        isMacCodeBlock: this.configStore.getMacCodeBlock()
+        isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
       });
 
       const title = yamlData.title || this.extractTitle(content) || '未命名文章';
 
-      // 生成公众号格式 HTML
+      // 生成公众号格式 HTML（使用与预览相同的配置）
       const theme = this.configStore.getTheme() as ThemeName;
-      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const color = this.configStore.getPrimaryColor();
+      const css = this.themeManager.getThemeCSS(theme, color, 'light', {
+        fontFamily: this.configStore.getFontFamily(),
+        fontSize: this.configStore.getFontSize(),
+        useIndent: this.configStore.getUseIndent(),
+        useJustify: this.configStore.getUseJustify(),
+      });
       const wechatHtml = copyWechatHtml(html, css);
 
       // 检查是否已有草稿
@@ -185,11 +201,19 @@ export class Publisher {
       const content = editor.document.getText();
       const { html } = renderMarkdown(content, {
         countStatus: this.configStore.getCountStatus(),
-        isMacCodeBlock: this.configStore.getMacCodeBlock()
+        isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
       });
 
       const theme = this.configStore.getTheme() as ThemeName;
-      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const color = this.configStore.getPrimaryColor();
+      const css = this.themeManager.getThemeCSS(theme, color, 'light', {
+        fontFamily: this.configStore.getFontFamily(),
+        fontSize: this.configStore.getFontSize(),
+        useIndent: this.configStore.getUseIndent(),
+        useJustify: this.configStore.getUseJustify(),
+      });
       const wechatHtml = copyWechatHtml(html, css);
 
       await vscode.env.clipboard.writeText(wechatHtml);
@@ -207,11 +231,19 @@ export class Publisher {
       const content = document.getText();
       const { html } = renderMarkdown(content, {
         countStatus: this.configStore.getCountStatus(),
-        isMacCodeBlock: this.configStore.getMacCodeBlock()
+        isMacCodeBlock: this.configStore.getMacCodeBlock(),
+        citeStatus: this.configStore.getCiteStatus(),
+        legend: this.configStore.getLegend(),
       });
 
       const theme = this.configStore.getTheme() as ThemeName;
-      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const color = this.configStore.getPrimaryColor();
+      const css = this.themeManager.getThemeCSS(theme, color, 'light', {
+        fontFamily: this.configStore.getFontFamily(),
+        fontSize: this.configStore.getFontSize(),
+        useIndent: this.configStore.getUseIndent(),
+        useJustify: this.configStore.getUseJustify(),
+      });
       const wechatHtml = copyWechatHtml(html, css);
 
       await vscode.env.clipboard.writeText(wechatHtml);
