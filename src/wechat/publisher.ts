@@ -112,8 +112,29 @@ export class Publisher {
 
       try {
         if (existingMediaId) {
-          await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
-          vscode.window.showInformationMessage(`草稿更新成功`);
+          // 尝试更新草稿
+          try {
+            await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
+            vscode.window.showInformationMessage(`草稿更新成功`);
+          } catch (updateError) {
+            // 如果更新失败（可能是封面图失效），尝试重新上传封面图后更新
+            const errorMsg = (updateError as Error).message;
+            if (errorMsg.includes('invalid media_id') || errorMsg.includes('invalid thumb_media_id')) {
+              console.log('[wechatPub] 封面图可能失效，尝试重新上传');
+              const newThumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);
+
+              if (!newThumbMediaId) {
+                vscode.window.showWarningMessage('更新失败：请先上传一张图片作为封面图，或在文章中添加已上传的图片');
+                return;
+              }
+
+              // 使用新封面图重新更新
+              await this.api.updateDraft(existingMediaId, 0, title, wechatHtml, newThumbMediaId);
+              vscode.window.showInformationMessage(`草稿更新成功（已更新封面图）`);
+            } else {
+              throw updateError;
+            }
+          }
         } else {
           // 获取封面图
           const thumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);
@@ -175,8 +196,29 @@ export class Publisher {
 
       try {
         if (existingMediaId) {
-          await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
-          vscode.window.showInformationMessage(`草稿更新成功`);
+          // 尝试更新草稿
+          try {
+            await this.api.updateDraft(existingMediaId, 0, title, wechatHtml);
+            vscode.window.showInformationMessage(`草稿更新成功`);
+          } catch (updateError) {
+            // 如果更新失败（可能是封面图失效），尝试重新上传封面图后更新
+            const errorMsg = (updateError as Error).message;
+            if (errorMsg.includes('invalid media_id') || errorMsg.includes('invalid thumb_media_id')) {
+              console.log('[wechatPub] 封面图可能失效，尝试重新上传');
+              const newThumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);
+
+              if (!newThumbMediaId) {
+                vscode.window.showWarningMessage('更新失败：请先上传一张图片作为封面图，或在文章中添加已上传的图片');
+                return;
+              }
+
+              // 使用新封面图重新更新
+              await this.api.updateDraft(existingMediaId, 0, title, wechatHtml, newThumbMediaId);
+              vscode.window.showInformationMessage(`草稿更新成功（已更新封面图）`);
+            } else {
+              throw updateError;
+            }
+          }
         } else {
           // 获取封面图
           const thumbMediaId = await this.getThumbMediaId(wechatHtml, filePath);

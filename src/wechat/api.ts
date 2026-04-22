@@ -150,13 +150,24 @@ export class WechatApiClient {
    * @param index 文章索引（从 0 开始）
    * @param title 文章标题
    * @param content 文章内容（HTML）
+   * @param newThumbMediaId 可选的新封面图 media_id（如果原有封面图失效）
    */
-  async updateDraft(mediaId: string, index: number, title: string, content: string): Promise<void> {
+  async updateDraft(mediaId: string, index: number, title: string, content: string, newThumbMediaId?: string): Promise<void> {
     const token = await this.getAccessToken();
 
-    // 先获取草稿详情，获取原有的 thumb_media_id
-    const draft = await this.getDraft(mediaId);
-    const thumbMediaId = draft.content?.news_item?.[index]?.thumb_media_id || '';
+    // 获取封面图：优先使用传入的新封面图，否则获取原有封面图
+    let thumbMediaId = newThumbMediaId || '';
+
+    if (!thumbMediaId) {
+      // 先获取草稿详情，获取原有的 thumb_media_id
+      try {
+        const draft = await this.getDraft(mediaId);
+        thumbMediaId = draft.content?.news_item?.[index]?.thumb_media_id || '';
+      } catch (e) {
+        // 获取失败时使用空字符串
+        console.error('[wechatPub] 获取草稿详情失败:', e);
+      }
+    }
 
     const url = `${this.getBaseUrl()}/cgi-bin/draft/update?access_token=${token}`;
 
