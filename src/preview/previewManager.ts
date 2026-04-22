@@ -244,6 +244,26 @@ export class PreviewManager {
   }
 
   /**
+   * 滚动同步
+   * 支持两种模式：
+   * - scroll: 即时按比例滚动
+   * - cursor: 语义定位校准
+   */
+  syncScroll(data: {
+    mode: 'scroll' | 'cursor';
+    ratio?: number;
+    heading?: { level: number; title: string } | null;
+    cursorLine?: number;
+    linesTotal?: number;
+  }): void {
+    if (!this.panel || this.currentMode !== 'preview') return;
+    this.panel.webview.postMessage({
+      type: 'syncScroll',
+      ...data
+    });
+  }
+
+  /**
    * 刷新预览
    */
   refresh(): void {

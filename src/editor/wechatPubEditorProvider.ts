@@ -150,15 +150,20 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
 
     // 监听 webview 消息
     webviewPanel.webview.onDidReceiveMessage(
-      async (message: { type: string; content?: string }) => {
+      async (message: {
+        type: string;
+        content?: string;
+        mode?: 'scroll' | 'cursor';
+        ratio?: number;
+        heading?: { level: number; title: string } | null;
+        cursorLine?: number;
+        linesTotal?: number;
+      }) => {
         switch (message.type) {
           case 'editContent':
             if (message.content) {
-              // 标记正在从 webview 编辑
               WechatPubEditorProvider.webviewEditingDocuments.add(key);
-              // 应用编辑
               await applyDocumentEdit(document, message.content);
-              // 编辑完成后清除标记
               setTimeout(() => {
                 WechatPubEditorProvider.webviewEditingDocuments.delete(key);
               }, 100);
@@ -166,10 +171,22 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
             break;
 
           case 'openSidePreview':
-            // 打开右侧分屏预览
             const previewManager = PreviewManager.getInstance();
             if (previewManager) {
               previewManager.showDocument(document);
+            }
+            break;
+
+          case 'scrollSync':
+            const previewMgr = PreviewManager.getInstance();
+            if (previewMgr) {
+              previewMgr.syncScroll({
+                mode: message.mode || 'scroll',
+                ratio: message.ratio,
+                heading: message.heading,
+                cursorLine: message.cursorLine,
+                linesTotal: message.linesTotal
+              });
             }
             break;
         }

@@ -27,11 +27,68 @@ export function generatePreviewHtml(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>${css}</style>
+  <style>
+    html, body {
+      height: 100%;
+      overflow: auto;
+      scroll-behavior: auto;
+    }
+  </style>
 </head>
-<body style="background:${previewBg};padding:20px;">
+<body style="background:${previewBg};padding:20px;overflow:auto;">
   <div id="output" style="${widthStyle}margin:auto;padding:20px;background:${contentBg};border-radius:8px;box-sizing:border-box;">
     ${content}
   </div>
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    // 辅助函数：规范化文本
+    function normalizeText(text) {
+      return text.replace(/\\s+/g, ' ').trim();
+    }
+
+    // 滚动同步处理
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (message.type === 'syncScroll') {
+        const output = document.getElementById('output');
+        const body = document.body;
+
+        // 滚动模式：即时按比例滚动
+        if (message.mode === 'scroll' && message.ratio !== undefined) {
+          const maxScrollTop = body.scrollHeight - body.clientHeight;
+          const targetScrollTop = Math.max(0, maxScrollTop * message.ratio);
+          body.scrollTop = targetScrollTop;
+          return;
+        }
+
+        // 光标模式：语义定位校准
+        if (message.mode === 'cursor' && message.heading) {
+          const { level, title } = message.heading;
+          const headings = output.querySelectorAll('h1, h2, h3, h4, h5, h6');
+          const normalizedTitle = normalizeText(title);
+
+          for (const h of headings) {
+            const hLevel = parseInt(h.tagName.slice(1));
+            if (hLevel !== level) continue;
+            const hText = normalizeText(h.textContent);
+            if (hText === normalizedTitle || hText.includes(normalizedTitle) || normalizedTitle.includes(hText)) {
+              const targetTop = h.offsetTop - 20;
+              body.scrollTop = Math.max(0, targetTop);
+              return;
+            }
+          }
+        }
+
+        // 如果没有找到标题，使用行比例定位
+        if (message.mode === 'cursor' && message.cursorLine && message.linesTotal) {
+          const ratio = message.cursorLine / message.linesTotal;
+          const maxScrollTop = body.scrollHeight - body.clientHeight;
+          body.scrollTop = Math.max(0, maxScrollTop * ratio);
+        }
+      }
+    });
+  </script>
 </body>
 </html>`;
 }
