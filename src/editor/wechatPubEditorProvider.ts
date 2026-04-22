@@ -32,6 +32,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   // 自定义 context key，用于控制按钮显示
   private static readonly contextKey = 'wechatPubCustomEditorActive';
 
+  // 存储用于刷新的静态引用
+  private static context: vscode.ExtensionContext | undefined;
+  private static configStore: ConfigStore | undefined;
+
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly configStore: ConfigStore
@@ -45,6 +49,10 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
   public static register(context: vscode.ExtensionContext): vscode.Disposable[] {
     const configStore = new ConfigStore(context);
     const provider = new WechatPubEditorProvider(context, configStore);
+
+    // 存储静态引用用于刷新
+    WechatPubEditorProvider.context = context;
+    WechatPubEditorProvider.configStore = configStore;
 
     // 注册 Custom Editor Provider
     const editorProvider = vscode.window.registerCustomEditorProvider(
@@ -93,14 +101,22 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
    * 刷新所有活动的编辑器
    */
   public static refreshAll(): void {
+    if (!WechatPubEditorProvider.context || !WechatPubEditorProvider.configStore) {
+      return;
+    }
+
+    const themeManager = new ThemeManager(WechatPubEditorProvider.context.extensionUri.fsPath);
+
     for (const [key, panel] of WechatPubEditorProvider.activePanels) {
       const document = WechatPubEditorProvider.activeDocuments.get(key);
       if (document && panel) {
-        const provider = new WechatPubEditorProvider(
-          panel.webview.options as any,
-          new ConfigStore(panel.webview.options as any)
+        panel.webview.html = getMarkdownWebviewContent(
+          panel.webview,
+          WechatPubEditorProvider.context.extensionUri,
+          document,
+          WechatPubEditorProvider.configStore,
+          themeManager
         );
-        panel.webview.html = provider.getMarkdownContent(document, panel.webview);
       }
     }
   }
