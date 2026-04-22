@@ -199,6 +199,28 @@ export class Publisher {
     }
   }
 
+  /**
+   * 复制公众号格式 HTML（支持 TextDocument 参数）
+   */
+  async copyHtmlDocument(document: vscode.TextDocument): Promise<void> {
+    try {
+      const content = document.getText();
+      const { html } = renderMarkdown(content, {
+        countStatus: this.configStore.getCountStatus(),
+        isMacCodeBlock: this.configStore.getMacCodeBlock()
+      });
+
+      const theme = this.configStore.getTheme() as ThemeName;
+      const css = this.themeManager.getThemeCSS(theme, this.configStore.getPrimaryColor());
+      const wechatHtml = copyWechatHtml(html, css);
+
+      await vscode.env.clipboard.writeText(wechatHtml);
+      vscode.window.showInformationMessage('公众号格式 HTML 已复制到剪贴板');
+    } catch (error) {
+      vscode.window.showErrorMessage(`复制失败: ${(error as Error).message}`);
+    }
+  }
+
   private extractTitle(content: string): string | undefined {
     const firstLine = content.split('\n')[0];
     if (firstLine.startsWith('# ')) {

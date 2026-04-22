@@ -71,15 +71,27 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // 复制 HTML 命令
-    vscode.commands.registerCommand('wechatPub.copyHtml', async () => {
+    // 复制 HTML 命令（支持 Custom Editor 和右键菜单传入 URI）
+    vscode.commands.registerCommand('wechatPub.copyHtml', async (uri?: vscode.Uri) => {
       try {
-        const editor = vscode.window.activeTextEditor;
-        if (editor?.document.languageId === 'markdown') {
-          await publisher.copyHtml(editor);
+        let documentUri: vscode.Uri | undefined;
+
+        // 优先使用命令传入的 URI（右键菜单场景）
+        if (uri) {
+          documentUri = uri;
         } else {
-          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          // 其次从 Custom Editor 或 activeTextEditor 获取
+          documentUri = WechatPubEditorProvider.getActiveMarkdownUri();
         }
+
+        if (!documentUri) {
+          vscode.window.showWarningMessage('请打开 Markdown 文件');
+          return;
+        }
+
+        // 打开文档并获取内容
+        const doc = await vscode.workspace.openTextDocument(documentUri);
+        await publisher.copyHtmlDocument(doc);
       } catch (error) {
         vscode.window.showErrorMessage(`复制 HTML 失败: ${getErrorMessage(error)}`);
       }
