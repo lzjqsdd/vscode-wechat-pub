@@ -153,6 +153,11 @@ export class WechatApiClient {
    */
   async updateDraft(mediaId: string, index: number, title: string, content: string): Promise<void> {
     const token = await this.getAccessToken();
+
+    // 先获取草稿详情，获取原有的 thumb_media_id
+    const draft = await this.getDraft(mediaId);
+    const thumbMediaId = draft.content?.news_item?.[index]?.thumb_media_id || '';
+
     const url = `${this.getBaseUrl()}/cgi-bin/draft/update?access_token=${token}`;
 
     const response = await this.fetchJson<WechatError>(url, {
@@ -163,7 +168,7 @@ export class WechatApiClient {
         articles: {
           title,
           content,
-          thumb_media_id: '',
+          thumb_media_id: thumbMediaId,
           author: '',
           digest: ''
         }
