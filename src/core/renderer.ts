@@ -247,6 +247,26 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     });
   }
 
+  // 后处理：为列表项添加前缀（• 或数字）
+  if (html) {
+    // 处理有序列表
+    html = html.replace(/<ol(?:\s[^>]*)?>([\s\S]*?)<\/ol>/g, (match: string, listContent: string) => {
+      let counter = 1;
+      const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
+        return `<li>${counter++}. ${itemContent}</li>`;
+      });
+      return `<ol>${processedItems}</ol>`;
+    });
+
+    // 处理无序列表
+    html = html.replace(/<ul(?:\s[^>]*)?>([\s\S]*?)<\/ul>/g, (match: string, listContent: string) => {
+      const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
+        return `<li>• ${itemContent}</li>`;
+      });
+      return `<ul>${processedItems}</ul>`;
+    });
+  }
+
   // 后处理：为图片添加 figure 包装
   if (html) {
     // 匹配 <img> 标签并包装为 figure
