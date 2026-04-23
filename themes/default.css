@@ -281,13 +281,14 @@ img {
 
 /* ==================== 列表 ==================== */
 ol {
+  list-style: none;
   padding-left: 1em;
   margin-left: 0;
   color: hsl(var(--foreground));
 }
 
 ul {
-  list-style: circle;
+  list-style: none;
   padding-left: 1em;
   margin-left: 0;
   color: hsl(var(--foreground));
