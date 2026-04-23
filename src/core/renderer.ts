@@ -252,8 +252,10 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     // 处理有序列表
     html = html.replace(/<ol(?:\s[^>]*)?>([\s\S]*?)<\/ol>/g, (match: string, listContent: string) => {
       let counter = 1;
+      // 移除列表项之间的换行，避免空白行
+      listContent = listContent.replace(/\n/g, '');
       const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
-        // 移除 <li> 内部的 <p> 包装，避免空白行
+        // 移除 <li> 内部的 <p> 包装
         const cleanContent = itemContent.replace(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/g, '$1').trim();
         return `<li>${counter++}. ${cleanContent}</li>`;
       });
@@ -262,8 +264,10 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
 
     // 处理无序列表
     html = html.replace(/<ul(?:\s[^>]*)?>([\s\S]*?)<\/ul>/g, (match: string, listContent: string) => {
+      // 移除列表项之间的换行，避免空白行
+      listContent = listContent.replace(/\n/g, '');
       const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
-        // 移除 <li> 内部的 <p> 包装，避免空白行
+        // 移除 <li> 内部的 <p> 包装
         const cleanContent = itemContent.replace(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/g, '$1').trim();
         return `<li>• ${cleanContent}</li>`;
       });
