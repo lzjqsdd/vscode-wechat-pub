@@ -253,7 +253,9 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     html = html.replace(/<ol(?:\s[^>]*)?>([\s\S]*?)<\/ol>/g, (match: string, listContent: string) => {
       let counter = 1;
       const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
-        return `<li>${counter++}. ${itemContent}</li>`;
+        // 移除 <li> 内部的 <p> 包装，避免空白行
+        const cleanContent = itemContent.replace(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/g, '$1').trim();
+        return `<li>${counter++}. ${cleanContent}</li>`;
       });
       return `<ol>${processedItems}</ol>`;
     });
@@ -261,7 +263,9 @@ export function renderMarkdown(content: string, options: RenderOptions = {}): Re
     // 处理无序列表
     html = html.replace(/<ul(?:\s[^>]*)?>([\s\S]*?)<\/ul>/g, (match: string, listContent: string) => {
       const processedItems = listContent.replace(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g, (itemMatch: string, itemContent: string) => {
-        return `<li>• ${itemContent}</li>`;
+        // 移除 <li> 内部的 <p> 包装，避免空白行
+        const cleanContent = itemContent.replace(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/g, '$1').trim();
+        return `<li>• ${cleanContent}</li>`;
       });
       return `<ul>${processedItems}</ul>`;
     });
