@@ -52,6 +52,72 @@ function getCursorContext(editor: HTMLTextAreaElement) {
 }
 
 /**
+ * 更新 textarea 内容，同时保持光标位置
+ * 通过计算新旧内容的差异，尽可能保持光标的相对位置
+ */
+function updateTextareaContent(editor: HTMLTextAreaElement, newContent: string): void {
+  const oldContent = editor.value;
+
+  // 如果内容相同，不需要更新
+  if (oldContent === newContent) {
+    return;
+  }
+
+  // 保存当前光标位置
+  const oldCursorPos = editor.selectionStart;
+  const oldScrollTop = editor.scrollTop;
+
+  // 计算光标前的内容
+  const textBeforeCursor = oldContent.substring(0, oldCursorPos);
+
+  // 查找光标所在行在旧内容中的起始位置
+  const lastNewlineBeforeCursor = textBeforeCursor.lastIndexOf('\n');
+  const lineStartPos = lastNewlineBeforeCursor + 1;
+
+  // 计算光标所在行的内容
+  const currentLineContent = textBeforeCursor.substring(lineStartPos);
+
+  // 计算光标所在的行号（从 1 开始）
+  const cursorLineNumber = textBeforeCursor.split('\n').length;
+
+  // 在新内容中找到对应行
+  const newLines = newContent.split('\n');
+
+  // 如果新内容的行数足够，尝试保持光标位置
+  if (cursorLineNumber <= newLines.length) {
+    // 计算新内容中对应行的起始位置
+    let newLineStartPos = 0;
+    for (let i = 0; i < cursorLineNumber - 1; i++) {
+      newLineStartPos += newLines[i].length + 1; // +1 for newline
+    }
+
+    // 尝试保持光标在该行的相对位置
+    const newLineContent = newLines[cursorLineNumber - 1] || '';
+    const cursorOffsetInLine = currentLineContent.length;
+
+    // 如果该行长度足够，保持相同偏移；否则放在行尾
+    const newCursorPos = newLineStartPos + Math.min(cursorOffsetInLine, newLineContent.length);
+
+    // 更新内容
+    editor.value = newContent;
+
+    // 恢复光标位置
+    editor.selectionStart = newCursorPos;
+    editor.selectionEnd = newCursorPos;
+
+    // 尝试恢复滚动位置（按比例）
+    const oldScrollRatio = oldScrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+    editor.scrollTop = oldScrollRatio * (editor.scrollHeight - editor.clientHeight || 0);
+  } else {
+    // 光标行号超出新内容范围，放在末尾
+    editor.value = newContent;
+    const newPos = newContent.length;
+    editor.selectionStart = newPos;
+    editor.selectionEnd = newPos;
+  }
+}
+
+/**
  * 初始化按钮事件
  */
 function initButtonEvents(): void {
@@ -125,12 +191,29 @@ function initScrollSync(): void {
 }
 
 /**
+ * 处理来自 VSCode 的消息
+ */
+function initMessageHandler(): void {
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+
+    if (message.type === 'updateContent') {
+      const editor = document.getElementById('markdown-editor') as HTMLTextAreaElement;
+      if (editor && message.content) {
+        updateTextareaContent(editor, message.content);
+      }
+    }
+  });
+}
+
+/**
  * 主入口
  */
 function main(): void {
   initButtonEvents();
   initTextareaEvents();
   initScrollSync();
+  initMessageHandler();
 }
 
 if (document.readyState === 'loading') {

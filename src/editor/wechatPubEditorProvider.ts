@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { getMarkdownWebviewContent } from './markdownWebviewContent';
 import { ConfigStore } from '../storage/configStore';
 import { ThemeManager } from '../preview/themeManager';
-import { applyDocumentEdit, debounce } from './documentSync';
+import { applyDocumentEdit } from './documentSync';
 import { PreviewManager } from '../preview/previewManager';
 
 /**
@@ -202,8 +202,12 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
         if (WechatPubEditorProvider.webviewEditingDocuments.has(key)) {
           return;
         }
-        // 使用防抖更新
-        this.debouncedUpdate(webviewPanel.webview, document);
+        // 通过消息发送新内容，而不是重新生成 HTML
+        // 这样可以保持 webview 中的光标位置
+        webviewPanel.webview.postMessage({
+          type: 'updateContent',
+          content: document.getText()
+        });
       }
     });
 
@@ -290,11 +294,4 @@ export class WechatPubEditorProvider implements vscode.CustomTextEditorProvider 
       this.themeManager
     );
   }
-
-  /**
-   * 防抖更新
-   */
-  private debouncedUpdate = debounce((webview: vscode.Webview, document: vscode.TextDocument) => {
-    webview.html = this.getMarkdownContent(document, webview);
-  }, 100);
 }
