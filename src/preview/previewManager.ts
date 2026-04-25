@@ -23,8 +23,11 @@ export class PreviewManager {
   private panel: vscode.WebviewPanel | undefined;
   private themeManager: ThemeManager;
   private configStore: ConfigStore;
+  private extensionUri: vscode.Uri;
+
+  // 所有监听器统一管理
   private disposables: vscode.Disposable[] = [];
-  private _isDisposed = false;
+
   private currentDocument: vscode.TextDocument | undefined;
   private currentMode: EditorMode = 'preview';
 
@@ -36,9 +39,10 @@ export class PreviewManager {
   private static instance: PreviewManager | undefined;
 
   constructor(
-    private extensionUri: vscode.Uri,
+    extensionUri: vscode.Uri,
     context: vscode.ExtensionContext
   ) {
+    this.extensionUri = extensionUri;
     this.themeManager = new ThemeManager(extensionUri.fsPath);
     this.configStore = new ConfigStore(context);
     PreviewManager.instance = this;
@@ -74,20 +78,20 @@ export class PreviewManager {
    * 显示预览面板
    */
   show(editor: vscode.TextEditor): void {
+    console.log('[PreviewManager] show() called, document:', editor.document.uri.fsPath);
     this.currentDocument = editor.document;
     this._showPanel();
     this._updateContent();
-    this._setupDocumentListener();
   }
 
   /**
    * 显示预览面板（从文档直接打开）
    */
   showDocument(document: vscode.TextDocument): void {
+    console.log('[PreviewManager] showDocument() called');
     this.currentDocument = document;
     this._showPanel();
     this._updateContent();
-    this._setupDocumentListener();
   }
 
   /**
@@ -120,11 +124,24 @@ export class PreviewManager {
    * 创建或显示 Webview 面板
    */
   private _showPanel(): void {
+    console.log('[PreviewManager] _showPanel() called, current panel:', this.panel ? 'exists' : 'undefined');
+
+    // 如果面板存在且有效，直接显示
     if (this.panel) {
+      console.log('[PreviewManager] panel exists, calling reveal()');
       this.panel.reveal(vscode.ViewColumn.Two);
       return;
     }
 
+    console.log('[PreviewManager] creating new panel...');
+
+    // 清理旧的监听器（如果有的话）
+    this._cleanupListeners();
+
+    // 重置单例
+    PreviewManager.instance = this;
+
+    // 创建新面板
     this.panel = vscode.window.createWebviewPanel(
       'wechatPubPreview',
       '公众号预览',
@@ -135,28 +152,69 @@ export class PreviewManager {
       }
     );
 
-    // 监听消息
-    this.panel.webview.onDidReceiveMessage((message: { type: string; content?: string }) => {
-      if (message.type === 'editContent' && message.content && this.currentDocument) {
-        this._applyEdit(message.content);
-      }
-    });
+    console.log('[PreviewManager] new panel created');
 
-    // 监听面板关闭事件
-    this.panel.onDidDispose(() => {
+    // 注册面板事件监听器（这些会随面板销毁自动清理，但仍需存储以防手动清理）
+    const messageDisposable = this.panel.webview.onDidReceiveMessage(
+      (message: { type: string; content?: string }) => {
+        if (message.type === 'editContent' && message.content && this.currentDocument) {
+          this._applyEdit(message.content);
+        }
+      }
+    );
+    this.disposables.push(messageDisposable);
+
+    // 面板关闭事件
+    const disposeDisposable = this.panel.onDidDispose(() => {
+      console.log('[PreviewManager] panel onDidDispose triggered');
       vscode.commands.executeCommand('setContext', PreviewManager.sidePreviewActiveKey, false);
       vscode.commands.executeCommand('setContext', PreviewManager.sidePreviewModeKey, undefined);
-      this._cleanup();
+      this.panel = undefined;
+      this._cleanupListeners();
     });
+    this.disposables.push(disposeDisposable);
 
-    // 监听面板状态变化，设置 context key
-    this.panel.onDidChangeViewState(() => {
+    // 面板状态变化
+    const viewStateDisposable = this.panel.onDidChangeViewState(() => {
       vscode.commands.executeCommand('setContext', PreviewManager.sidePreviewActiveKey, this.panel?.active || false);
     });
+    this.disposables.push(viewStateDisposable);
 
-    // 设置初始 context - 分屏预览已打开，模式为 preview
+    // 注册 VSCode 全局事件监听器
+    this._registerGlobalListeners();
+
+    // 设置初始 context
     vscode.commands.executeCommand('setContext', PreviewManager.sidePreviewActiveKey, true);
     vscode.commands.executeCommand('setContext', PreviewManager.sidePreviewModeKey, this.currentMode);
+  }
+
+  /**
+   * 注册 VSCode 全局事件监听器
+   * 所有监听器都存入 disposables 数组以便统一清理
+   */
+  private _registerGlobalListeners(): void {
+    console.log('[PreviewManager] registering global listeners');
+
+    // 监听文档变化
+    const docChangeDisposable = vscode.workspace.onDidChangeTextDocument(e => {
+      if (this.currentDocument && e.document.uri.toString() === this.currentDocument.uri.toString()) {
+        if (this.currentMode === 'markdown' && this._webviewEditing) {
+          this._webviewEditing = false;
+          return;
+        }
+        this._updateContent();
+      }
+    });
+    this.disposables.push(docChangeDisposable);
+
+    // 监听活动编辑器变化
+    const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(e => {
+      if (e && e.document.languageId === 'markdown' && this.panel) {
+        this.currentDocument = e.document;
+        this._updateContent();
+      }
+    });
+    this.disposables.push(editorChangeDisposable);
 
     // 监听 VSCode 颜色主题变化
     const colorThemeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
@@ -167,35 +225,6 @@ export class PreviewManager {
     this.disposables.push(colorThemeDisposable);
   }
 
-  /**
-   * 设置文档变化监听
-   */
-  private _setupDocumentListener(): void {
-    if (this._documentListenerRegistered) return;
-    this._documentListenerRegistered = true;
-
-    // 监听文档变化，实时更新
-    vscode.workspace.onDidChangeTextDocument(e => {
-      if (this.currentDocument && e.document.uri.toString() === this.currentDocument.uri.toString()) {
-        // Markdown 模式下跳过来自 webview 的编辑
-        if (this.currentMode === 'markdown' && this._webviewEditing) {
-          this._webviewEditing = false;
-          return;
-        }
-        this._updateContent();
-      }
-    });
-
-    // 监听活动编辑器变化
-    vscode.window.onDidChangeActiveTextEditor(e => {
-      if (e && e.document.languageId === 'markdown' && this.panel) {
-        this.currentDocument = e.document;
-        this._updateContent();
-      }
-    });
-  }
-
-  private _documentListenerRegistered = false;
   private _webviewEditing = false;
 
   /**
@@ -217,7 +246,12 @@ export class PreviewManager {
    * 更新面板内容
    */
   private _updateContent(): void {
-    if (!this.panel || !this.currentDocument) return;
+    if (!this.panel || !this.currentDocument) {
+      console.log('[PreviewManager] _updateContent skipped: panel=', this.panel ? 'exists' : 'undefined', 'document=', this.currentDocument ? 'exists' : 'undefined');
+      return;
+    }
+
+    console.log('[PreviewManager] _updateContent called');
 
     const content = this.currentDocument.getText();
     const vscodeThemeKind = this.getVSCodeThemeKind();
@@ -245,9 +279,6 @@ export class PreviewManager {
 
   /**
    * 滚动同步
-   * 支持两种模式：
-   * - scroll: 即时按比例滚动
-   * - cursor: 语义定位校准
    */
   syncScroll(data: {
     mode: 'scroll' | 'cursor';
@@ -286,18 +317,22 @@ export class PreviewManager {
     if (this.panel) {
       this.panel.dispose();
       this.panel = undefined;
+      this._cleanupListeners();
     }
   }
 
   /**
-   * 清理逻辑
+   * 清理所有监听器
    */
-  private _cleanup(): void {
-    if (this._isDisposed) return;
-    this._isDisposed = true;
-    this.panel = undefined;
-    PreviewManager.instance = undefined;
-    this.disposables.forEach(d => d.dispose());
+  private _cleanupListeners(): void {
+    console.log('[PreviewManager] _cleanupListeners called, disposables count:', this.disposables.length);
+    this.disposables.forEach(d => {
+      try {
+        d.dispose();
+      } catch (e) {
+        // 忽略已 dispose 的错误
+      }
+    });
     this.disposables = [];
   }
 
@@ -305,6 +340,6 @@ export class PreviewManager {
    * 销毁管理器
    */
   dispose(): void {
-    this._cleanup();
+    this.close();
   }
 }
