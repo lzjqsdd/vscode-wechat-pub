@@ -1,0 +1,17 @@
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+.gitignore
+*.map
+**/*.ts
+!dist/**/*.js
+tsconfig.json
+webpack.config.js
+README-zh.md
+.github/**
+memory/**
+plans/**
+CLAUDE.md
+GEMINI.md
+AGENTS.md

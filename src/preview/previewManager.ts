@@ -5,6 +5,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { renderMarkdown } from '../core/renderer';
 import { ThemeManager, ThemeName } from './themeManager';
 import { generatePreviewHtml, generateMarkdownHtml } from './webviewHtml';
@@ -271,10 +272,67 @@ export class PreviewManager {
         citeStatus: this.configStore.getCiteStatus(),
         legend: this.configStore.getLegend(),
       });
-      this.panel.webview.html = generatePreviewHtml(html, css, vscodeThemeKind, this.configStore.getPreviewWidth());
+      // 转换本地图片路径为 webview 可访问的 URI
+      const convertedHtml = this._convertLocalImages(html);
+      this.panel.webview.html = generatePreviewHtml(convertedHtml, css, vscodeThemeKind, this.configStore.getPreviewWidth(), this.extensionUri, this.panel.webview);
     } else {
       this.panel.webview.html = generateMarkdownHtml(content, css, vscodeThemeKind, this.extensionUri, this.panel.webview);
     }
+  }
+
+  /**
+   * 将 HTML 中的本地图片路径转换为 Webview 可访问的 URI
+   */
+  private _convertLocalImages(html: string): string {
+    if (!this.panel || !this.currentDocument) {
+      return html;
+    }
+
+    // 保存引用，避免在回调中 TypeScript 认为可能变为 undefined
+    const currentDocument = this.currentDocument;
+    const webview = this.panel.webview;
+
+    // 匹配 img 标签中的 src 属性
+    return html.replace(/<img([^>]*)src="([^"]*)"([^>]*)>/g, (match, before, src, after) => {
+      // 只处理相对路径和本地绝对路径
+      if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+        return match;
+      }
+
+      try {
+        // 计算图片的绝对路径
+        let imagePath: string;
+        if (src.startsWith('/') || src.match(/^([A-Za-z]:[/\\]|\\\\)/)) {
+          // 已经是绝对路径
+          imagePath = src;
+        } else {
+          // 相对路径：基于当前文档所在目录计算
+          const documentUri = currentDocument.uri;
+          // 获取文档所在目录
+          const docDirUri = vscode.Uri.joinPath(documentUri, '..');
+          // 计算图片绝对路径
+          const imageUri = vscode.Uri.joinPath(docDirUri, src);
+          imagePath = imageUri.fsPath;
+        }
+
+        // 检查文件是否存在
+        if (!fs.existsSync(imagePath)) {
+          console.log('[PreviewManager] image not found:', imagePath);
+          return match;
+        }
+
+        // 转换为 webview URI
+        const imageUri = vscode.Uri.file(imagePath);
+        const webviewUri = webview.asWebviewUri(imageUri);
+
+        console.log('[PreviewManager] converted image:', src, '->', webviewUri.toString());
+
+        return `<img${before}src="${webviewUri.toString()}"${after}>`;
+      } catch (e) {
+        console.error('[PreviewManager] error converting image:', src, e);
+        return match;
+      }
+    });
   }
 
   /**

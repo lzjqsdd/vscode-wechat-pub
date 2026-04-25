@@ -12,7 +12,9 @@ export function generatePreviewHtml(
   content: string,
   css: string,
   vscodeThemeKind: string = 'light',
-  previewWidth: string = 'mobile'
+  previewWidth: string = 'mobile',
+  extensionUri?: vscode.Uri,
+  webview?: vscode.Webview
 ): string {
   const isDark = vscodeThemeKind === 'dark' || vscodeThemeKind === 'high-contrast';
   const previewBg = isDark ? '#1e1e1e' : '#f5f5f5';
@@ -20,12 +22,18 @@ export function generatePreviewHtml(
 
   const widthStyle = previewWidth === 'desktop' ? 'width:100%;max-width:800px;' : 'width:375px;';
 
+  // CSP: 允许加载 webview 资源和内联样式
+  const csp = webview
+    ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'unsafe-inline';">`
+    : '';
+
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${csp}
   <style>${css}</style>
   <style>
     html, body {

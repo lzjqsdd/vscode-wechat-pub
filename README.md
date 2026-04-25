@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="infmax-wechat.png" alt="微信公众号助手" width="600" />
+</p>
+
 # vscode-wechat-pub
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=lzjqsdd.vscode-wechat-pub)
