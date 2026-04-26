@@ -10,6 +10,9 @@
 VSCode 微信公众号 Markdown 编辑助手，支持实时预览、一键发布、多主题排版、图片上传等功能，让公众号文章写作更高效。
 
 ## 功能特性
+<p align="center">
+  <img src="example/preview.png" alt="微信公众号助手" width="600" />
+</p>
 
 ### 📝 实时预览
 - 编辑 Markdown 时实时预览公众号格式效果
