@@ -1,13 +1,11 @@
 /**
  * 图片上传服务
  * 支持上传本地图片到公众号，并替换 Markdown 中的图片路径
- * 自动压缩超过大小限制的图片
  */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import sharp from 'sharp';
 import { WechatApiClient } from './api';
 import { ConfigStore } from '../storage/configStore';
 import { ImageRegistry } from '../storage/imageRegistry';
@@ -28,105 +26,6 @@ export class ImageUploadService {
   }
 
   /**
-   * 压缩图片到指定大小以内
-   * @param filePath 图片路径
-   * @param maxSizeBytes 最大大小（字节）
-   * @returns 压缩后的图片 Buffer
-   */
-  private async compressImage(filePath: string, maxSizeBytes: number): Promise<{ buffer: Buffer; wasCompressed: boolean }> {
-    const originalBuffer = fs.readFileSync(filePath);
-    const originalSize = originalBuffer.length;
-
-    // 如果已经满足大小限制，直接返回
-    if (originalSize <= maxSizeBytes) {
-      return { buffer: originalBuffer, wasCompressed: false };
-    }
-
-    const ext = path.extname(filePath).toLowerCase();
-    const originalSizeMB = originalSize / (1024 * 1024);
-
-    console.log(`[wechatPub] 图片大小 ${originalSizeMB.toFixed(2)}MB 超过限制，开始自动压缩...`);
-
-    // 获取图片元信息
-    const metadata = await sharp(originalBuffer).metadata();
-    const originalWidth = metadata.width || 800;
-    const originalHeight = metadata.height || 600;
-
-    // 压缩策略：逐步降低质量和尺寸
-    let compressedBuffer: Buffer | null = null;
-    let currentQuality = 85;  // 初始质量
-    let currentScale = 1.0;   // 初始缩放比例
-
-    // 根据图片格式选择压缩策略
-    const isPng = ext === '.png';
-    const isJpeg = ext === '.jpg' || ext === '.jpeg';
-    const isGif = ext === '.gif';
-    const isWebp = ext === '.webp';
-
-    // 尝试不同压缩参数
-    while (currentQuality >= 20 && currentScale >= 0.3) {
-      try {
-        const scaledWidth = Math.round(originalWidth * currentScale);
-        const scaledHeight = Math.round(originalHeight * currentScale);
-
-        let sharpInstance = sharp(originalBuffer)
-          .resize(scaledWidth, scaledHeight, {
-            fit: 'inside',
-            withoutEnlargement: true
-          });
-
-        // 根据格式选择输出选项
-        if (isPng) {
-          // PNG: 使用 JPEG 输出（更小），或者压缩 PNG
-          // 对于大 PNG，转为 JPEG 通常能大幅减小体积
-          sharpInstance = sharpInstance
-            .flatten({ background: { r: 255, g: 255, b: 255, alpha: 1 } }) // 移除透明通道
-            .jpeg({ quality: currentQuality, mozjpeg: true });
-        } else if (isJpeg || isWebp) {
-          sharpInstance = sharpInstance.jpeg({ quality: currentQuality, mozjpeg: true });
-        } else if (isGif) {
-          // GIF 不支持 sharp 压缩，尝试转为 JPEG
-          sharpInstance = sharpInstance.jpeg({ quality: currentQuality, mozjpeg: true });
-        } else {
-          sharpInstance = sharpInstance.jpeg({ quality: currentQuality, mozjpeg: true });
-        }
-
-        compressedBuffer = await sharpInstance.toBuffer();
-
-        console.log(`[wechatPub] 压缩尝试: quality=${currentQuality}, scale=${currentScale.toFixed(2)}, size=${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
-
-        if (compressedBuffer.length <= maxSizeBytes) {
-          console.log(`[wechatPub] 压缩成功: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
-          break;
-        }
-
-        // 先降低质量，再缩小尺寸
-        if (currentQuality > 50) {
-          currentQuality -= 10;
-        } else if (currentQuality > 30) {
-          currentQuality -= 5;
-          currentScale -= 0.1;
-        } else {
-          currentQuality -= 5;
-          currentScale -= 0.1;
-        }
-      } catch (e) {
-        console.error('[wechatPub] 压缩失败:', e);
-        break;
-      }
-    }
-
-    if (!compressedBuffer || compressedBuffer.length > maxSizeBytes) {
-      throw new Error(
-        `图片压缩后仍超过限制（${(compressedBuffer?.length || originalSize) / 1024 / 1024}MB > ${MAX_SIZE_MB}MB）。` +
-        `建议使用专业工具预先处理，如 tinypng.com 或 squoosh.app`
-      );
-    }
-
-    return { buffer: compressedBuffer, wasCompressed: true };
-  }
-
-  /**
    * 上传本地图片文件到公众号
    * @param filePath 图片文件路径
    * @returns 返回公众号图片 URL
@@ -144,34 +43,22 @@ export class ImageUploadService {
       throw new Error(`不支持的图片格式: ${ext}`);
     }
 
-    // 检查文件大小，决定是否需要压缩
+    // 检查文件大小（公众号限制 2MB）
     const stats = fs.statSync(filePath);
     const fileSizeMB = stats.size / (1024 * 1024);
 
-    let uploadBuffer: Buffer;
-    let filename = path.basename(filePath);
-
     if (fileSizeMB > MAX_SIZE_MB) {
-      // 提示用户将要自动压缩
-      vscode.window.showInformationMessage(
-        `图片大小 ${fileSizeMB.toFixed(2)}MB 超过限制，正在自动压缩...`
-      );
-
-      // 自动压缩
-      const { buffer, wasCompressed } = await this.compressImage(filePath, MAX_SIZE_BYTES);
-      uploadBuffer = buffer;
-
-      // 如果压缩了，修改文件名（PNG 转 JPEG）
-      if (wasCompressed && ext === '.png') {
-        filename = filename.replace('.png', '.jpg');
-      }
-    } else {
-      // 直接读取
-      uploadBuffer = fs.readFileSync(filePath);
+      // 提供详细的错误信息和解决方案
+      const message = `图片大小 ${fileSizeMB.toFixed(2)}MB 超过公众号限制（最大 ${MAX_SIZE_MB}MB）\n\n推荐压缩工具:\n• tinypng.com (PNG/JPG)\n• squoosh.app (Google)\n• 降低图片分辨率\n• PNG 转 JPG 格式`;
+      throw new Error(message);
     }
 
+    // 读取文件
+    const buffer = fs.readFileSync(filePath);
+    const filename = path.basename(filePath);
+
     // 上传到公众号
-    return await this.api.uploadImage(uploadBuffer, filename);
+    return await this.api.uploadImage(buffer, filename);
   }
 
   /**
