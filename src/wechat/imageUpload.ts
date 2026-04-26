@@ -1,11 +1,13 @@
 /**
  * 图片上传服务
  * 支持上传本地图片到公众号，并替换 Markdown 中的图片路径
+ * 自动压缩超过大小限制的图片（使用纯 JS 的 jimp 库）
  */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Jimp, JimpMime } from 'jimp';
 import { WechatApiClient } from './api';
 import { ConfigStore } from '../storage/configStore';
 import { ImageRegistry } from '../storage/imageRegistry';
@@ -26,6 +28,87 @@ export class ImageUploadService {
   }
 
   /**
+   * 使用 Jimp 压缩图片
+   * @param filePath 图片路径
+   * @param maxSizeBytes 最大大小（字节）
+   * @returns 压缩后的图片 Buffer 和文件名
+   */
+  private async compressImage(filePath: string, maxSizeBytes: number): Promise<{ buffer: Buffer; filename: string }> {
+    const ext = path.extname(filePath).toLowerCase();
+    const originalFilename = path.basename(filePath);
+    const originalSize = fs.statSync(filePath).size;
+
+    console.log(`[wechatPub] 开始压缩图片: ${originalFilename}, 原大小: ${(originalSize / 1024 / 1024).toFixed(2)}MB`);
+
+    // 读取图片
+    const image = await Jimp.read(filePath);
+
+    // 获取原始尺寸
+    const originalWidth = image.width;
+    const originalHeight = image.height;
+
+    // 压缩策略：逐步降低质量和尺寸
+    let quality = 85;
+    let scale = 1.0;
+    let buffer: Buffer | null = null;
+    // PNG 大图转为 JPG 以获得更小体积
+    const outputMime = ext === '.png' ? JimpMime.jpeg : JimpMime.jpeg;
+
+    // 循环尝试不同参数直到满足大小限制
+    while (quality >= 30 && scale >= 0.3) {
+      try {
+        // 计算缩放后的尺寸
+        const newWidth = Math.round(originalWidth * scale);
+        const newHeight = Math.round(originalHeight * scale);
+
+        // 缩放图片（使用 resize 方法）
+        if (scale < 1.0) {
+          image.resize({ w: newWidth, h: newHeight });
+        }
+
+        // 获取 Buffer（JPEG 格式，设置质量）
+        buffer = await image.getBuffer(outputMime, { quality });
+
+        const sizeMB = buffer.length / 1024 / 1024;
+        console.log(`[wechatPub] 压缩尝试: quality=${quality}, scale=${scale.toFixed(2)}, size=${sizeMB.toFixed(2)}MB`);
+
+        if (buffer.length <= maxSizeBytes) {
+          console.log(`[wechatPub] 压缩成功: 最终大小 ${sizeMB.toFixed(2)}MB`);
+          break;
+        }
+
+        // 先降低质量，再缩小尺寸
+        if (quality > 50) {
+          quality -= 15;
+        } else if (quality > 30) {
+          quality -= 10;
+          scale -= 0.15;
+        } else {
+          scale -= 0.1;
+        }
+      } catch (e) {
+        console.error('[wechatPub] 压缩失败:', e);
+        break;
+      }
+    }
+
+    if (!buffer || buffer.length > maxSizeBytes) {
+      throw new Error(
+        `图片压缩后仍超过限制（${(buffer?.length || originalSize) / 1024 / 1024}MB > ${MAX_SIZE_MB}MB）。\n` +
+        `建议使用专业工具预先处理: tinypng.com 或 squoosh.app`
+      );
+    }
+
+    // 生成新文件名（PNG 转 JPG 时修改扩展名）
+    let newFilename = originalFilename;
+    if (ext === '.png') {
+      newFilename = originalFilename.replace('.png', '.jpg');
+    }
+
+    return { buffer, filename: newFilename };
+  }
+
+  /**
    * 上传本地图片文件到公众号
    * @param filePath 图片文件路径
    * @returns 返回公众号图片 URL
@@ -43,22 +126,34 @@ export class ImageUploadService {
       throw new Error(`不支持的图片格式: ${ext}`);
     }
 
-    // 检查文件大小（公众号限制 2MB）
+    // 检查文件大小
     const stats = fs.statSync(filePath);
     const fileSizeMB = stats.size / (1024 * 1024);
 
+    let uploadBuffer: Buffer;
+    let filename = path.basename(filePath);
+
     if (fileSizeMB > MAX_SIZE_MB) {
-      // 提供详细的错误信息和解决方案
-      const message = `图片大小 ${fileSizeMB.toFixed(2)}MB 超过公众号限制（最大 ${MAX_SIZE_MB}MB）\n\n推荐压缩工具:\n• tinypng.com (PNG/JPG)\n• squoosh.app (Google)\n• 降低图片分辨率\n• PNG 转 JPG 格式`;
-      throw new Error(message);
+      // 提示用户正在自动压缩
+      vscode.window.showInformationMessage(
+        `图片大小 ${fileSizeMB.toFixed(2)}MB 超过限制，正在自动压缩...`
+      );
+
+      // 自动压缩
+      const { buffer, filename: newFilename } = await this.compressImage(filePath, MAX_SIZE_BYTES);
+      uploadBuffer = buffer;
+      filename = newFilename;
+
+      vscode.window.showInformationMessage(
+        `图片已压缩为 ${(uploadBuffer.length / 1024 / 1024).toFixed(2)}MB，正在上传...`
+      );
+    } else {
+      // 直接读取
+      uploadBuffer = fs.readFileSync(filePath);
     }
 
-    // 读取文件
-    const buffer = fs.readFileSync(filePath);
-    const filename = path.basename(filePath);
-
     // 上传到公众号
-    return await this.api.uploadImage(buffer, filename);
+    return await this.api.uploadImage(uploadBuffer, filename);
   }
 
   /**
