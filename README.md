@@ -1,11 +1,10 @@
-<p align="center">
-  <img src="infmax-wechat.png" alt="微信公众号助手" width="600" />
-</p>
-
 # vscode-wechat-pub
+
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=lzjqsdd.vscode-wechat-pub)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+![infmax-wechat-s.png](https://infmax.top/img/infmax-wechat-s.png)
 
 VSCode 微信公众号 Markdown 编辑助手，支持实时预览、一键发布、多主题排版、图片上传等功能，让公众号文章写作更高效。
 

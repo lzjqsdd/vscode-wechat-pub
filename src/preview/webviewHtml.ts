@@ -22,9 +22,9 @@ export function generatePreviewHtml(
 
   const widthStyle = previewWidth === 'desktop' ? 'width:100%;max-width:800px;' : 'width:375px;';
 
-  // CSP: 允许加载 webview 资源和内联样式
+  // CSP: 允许加载 webview 资源、HTTPS/HTTP 图片和内联样式
   const csp = webview
-    ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'unsafe-inline';">`
+    ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: http: data: blob:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'unsafe-inline';">`
     : '';
 
   return `
