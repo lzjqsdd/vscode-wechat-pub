@@ -150,6 +150,8 @@ export class PreviewManager {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
+          enableFindWidget: true,
+          portMapping: [],
       }
     );
 
